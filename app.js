@@ -74,22 +74,24 @@ const elements = {
 async function initApp() {
     console.log("Iniciando aplicación...");
     
-    // Establecer año actual
-    elements.currentYear.textContent = new Date().getFullYear();
-    
-    // Configurar event listeners
-    setupEventListeners();
-    
-    // Verificar parámetros de URL
-    checkURLParams();
-    
-    // Cargar carrito desde localStorage
-    loadCartFromLocalStorage();
-    
-    // Configurar autenticación de Firebase
-    setupFirebaseAuth();
-    
-    console.log("Aplicación inicializada");
+    try {
+        // Establecer año actual
+        elements.currentYear.textContent = new Date().getFullYear();
+        
+        // Configurar event listeners básicos primero
+        setupEventListeners();
+        
+        // Verificar parámetros de URL
+        checkURLParams();
+        
+        // Configurar autenticación de Firebase
+        await setupFirebaseAuth();
+        
+        console.log("Aplicación inicializada correctamente");
+    } catch (error) {
+        console.error("Error inicializando aplicación:", error);
+        showNotification("Error al iniciar la aplicación", "error");
+    }
 }
 
 // Configurar parámetros de URL
@@ -97,62 +99,95 @@ function checkURLParams() {
     const urlParams = new URLSearchParams(window.location.search);
     const storeId = urlParams.get('store');
     
+    console.log("Parámetros de URL:", { storeId, fullUrl: window.location.href });
+    
     if (storeId) {
         // Vista de cliente - cargar tienda específica
         appState.storeId = storeId;
+        console.log("Modo CLIENTE - storeId:", storeId);
         loadStoreForCustomer(storeId);
     } else {
         // Vista de propietario (requiere autenticación)
+        console.log("Modo ADMIN - esperando autenticación");
         elements.catalogDescription.textContent = "Inicia sesión para administrar tu tienda";
     }
 }
 
 // Configurar autenticación de Firebase
-function setupFirebaseAuth() {
-    const { auth, onAuthStateChanged } = window.firebaseServices;
-    
-    // Escuchar cambios en el estado de autenticación
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            // Usuario autenticado
-            appState.currentUser = user;
+async function setupFirebaseAuth() {
+    try {
+        const { auth, onAuthStateChanged } = window.firebaseServices;
+        
+        // Escuchar cambios en el estado de autenticación
+        onAuthStateChanged(auth, async (user) => {
+            console.log("Estado de autenticación cambiado:", user ? "Usuario autenticado" : "Usuario no autenticado");
             
-            // Si no hay storeId en URL, usar el ID del usuario
-            if (!appState.storeId) {
-                appState.storeId = user.uid;
-                appState.isAdmin = true;
-                await loadUserStore(user.uid);
+            if (user) {
+                // Usuario autenticado
+                appState.currentUser = user;
+                console.log("Usuario autenticado:", { uid: user.uid, email: user.email });
+                
+                // Si no hay storeId en URL, usar el ID del usuario
+                if (!appState.storeId) {
+                    appState.storeId = user.uid;
+                    appState.isAdmin = true;
+                    console.log("Modo ADMIN activado para usuario:", user.uid);
+                    await loadUserStore(user.uid);
+                } else {
+                    // Si hay storeId en URL, verificar si es el propietario
+                    if (appState.storeId === user.uid) {
+                        appState.isAdmin = true;
+                        console.log("Usuario es propietario de esta tienda");
+                        await loadUserStore(user.uid);
+                    }
+                }
+                
+                updateAuthUI();
+            } else {
+                // Usuario no autenticado
+                console.log("Usuario NO autenticado");
+                appState.currentUser = null;
+                updateAuthUI();
             }
-            
-            updateAuthUI();
-        } else {
-            // Usuario no autenticado
-            appState.currentUser = null;
-            updateAuthUI();
-        }
-    });
+        });
+        
+        console.log("Firebase Auth configurado correctamente");
+    } catch (error) {
+        console.error("Error configurando Firebase Auth:", error);
+        throw error;
+    }
 }
 
 // Cargar tienda del usuario
 async function loadUserStore(storeId) {
+    console.log("loadUserStore llamado con storeId:", storeId);
+    console.log("Usuario actual:", appState.currentUser?.uid);
+    
     try {
         const { db, doc, getDoc } = window.firebaseServices;
         
+        console.log("Buscando tienda en Firestore...");
         const storeRef = doc(db, "stores", storeId);
         const storeSnap = await getDoc(storeRef);
         
         if (storeSnap.exists()) {
+            console.log("Tienda encontrada:", storeSnap.data());
             appState.currentStore = storeSnap.data();
             elements.storeName.textContent = appState.currentStore.storeName;
             elements.storeIdDisplay.textContent = storeId;
             await loadStoreProducts(storeId);
             
             // Mostrar panel de administración
+            console.log("Mostrando panel de administración...");
             elements.adminPanel.classList.remove('hidden');
             elements.catalogPanel.classList.add('hidden');
             elements.configBtn.classList.remove('hidden');
             elements.myStoreBtn.classList.remove('hidden');
+            
+            // Cargar carrito
+            loadCartFromLocalStorage();
         } else {
+            console.log("Tienda NO existe, creando...");
             // Crear tienda si no existe
             await createStoreForUser(storeId);
         }
@@ -165,6 +200,8 @@ async function loadUserStore(storeId) {
 // Cargar tienda para cliente
 async function loadStoreForCustomer(storeId) {
     try {
+        console.log("Cargando tienda para cliente:", storeId);
+        
         const { db, doc, getDoc } = window.firebaseServices;
         
         const storeRef = doc(db, "stores", storeId);
@@ -180,6 +217,9 @@ async function loadStoreForCustomer(storeId) {
             elements.configBtn.classList.add('hidden');
             
             await loadStoreProducts(storeId);
+            
+            // Cargar carrito
+            loadCartFromLocalStorage();
         } else {
             showNotification("Tienda no encontrada", "error");
             elements.catalogDescription.textContent = "Tienda no encontrada";
@@ -214,6 +254,11 @@ async function createStoreForUser(storeId) {
         elements.catalogPanel.classList.add('hidden');
         elements.configBtn.classList.remove('hidden');
         elements.myStoreBtn.classList.remove('hidden');
+        
+        // Cargar carrito
+        loadCartFromLocalStorage();
+        
+        console.log("Tienda creada exitosamente");
     } catch (error) {
         console.error("Error creando tienda:", error);
         showNotification("Error creando tienda", "error");
@@ -223,6 +268,8 @@ async function createStoreForUser(storeId) {
 // Cargar productos de la tienda
 async function loadStoreProducts(storeId) {
     try {
+        console.log("Cargando productos para tienda:", storeId);
+        
         const { db, collection, getDocs, query, orderBy } = window.firebaseServices;
         
         const productsRef = collection(db, "stores", storeId, "products");
@@ -237,6 +284,7 @@ async function loadStoreProducts(storeId) {
             });
         });
         
+        console.log(`Productos cargados: ${appState.products.length}`);
         updateUI();
     } catch (error) {
         console.error("Error cargando productos:", error);
@@ -246,34 +294,40 @@ async function loadStoreProducts(storeId) {
 
 // Configurar event listeners
 function setupEventListeners() {
+    console.log("Configurando event listeners...");
+    
     // Botones principales
-    elements.authBtn.addEventListener('click', openAuthModal);
-    elements.myStoreBtn.addEventListener('click', () => {
-        window.location.href = `/?store=${appState.currentUser.uid}`;
+    if (elements.authBtn) elements.authBtn.addEventListener('click', openAuthModal);
+    if (elements.myStoreBtn) elements.myStoreBtn.addEventListener('click', () => {
+        if (appState.currentUser) {
+            window.location.href = `/?store=${appState.currentUser.uid}`;
+        }
     });
-    elements.viewCart.addEventListener('click', () => {
+    if (elements.viewCart) elements.viewCart.addEventListener('click', () => {
         openModal(elements.cartModal);
         updateCartUI();
     });
-    elements.configBtn.addEventListener('click', openConfigModal);
-    elements.addProduct.addEventListener('click', openAddProductModal);
-    elements.clearCart.addEventListener('click', clearCart);
-    elements.checkoutWhatsapp.addEventListener('click', checkoutViaWhatsApp);
-    elements.saveConfig.addEventListener('click', saveStoreConfig);
-    elements.copyLink.addEventListener('click', copyStoreLink);
+    if (elements.configBtn) elements.configBtn.addEventListener('click', openConfigModal);
+    if (elements.addProduct) elements.addProduct.addEventListener('click', openAddProductModal);
+    if (elements.clearCart) elements.clearCart.addEventListener('click', clearCart);
+    if (elements.checkoutWhatsapp) elements.checkoutWhatsapp.addEventListener('click', checkoutViaWhatsApp);
+    if (elements.saveConfig) elements.saveConfig.addEventListener('click', saveStoreConfig);
+    if (elements.copyLink) elements.copyLink.addEventListener('click', copyStoreLink);
     
     // Formularios
-    elements.loginForm.addEventListener('submit', handleLogin);
-    elements.registerForm.addEventListener('submit', handleRegister);
-    elements.productForm.addEventListener('submit', handleProductSubmit);
+    if (elements.loginForm) elements.loginForm.addEventListener('submit', handleLogin);
+    if (elements.registerForm) elements.registerForm.addEventListener('submit', handleRegister);
+    if (elements.productForm) elements.productForm.addEventListener('submit', handleProductSubmit);
     
     // Tabs de autenticación
-    elements.tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tab = btn.dataset.tab;
-            switchAuthTab(tab);
+    if (elements.tabBtns) {
+        elements.tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                switchAuthTab(tab);
+            });
         });
-    });
+    }
     
     // Cerrar modales
     document.querySelectorAll('.close-modal').forEach(btn => {
@@ -290,7 +344,8 @@ function setupEventListeners() {
     });
     
     // Gestión de imágenes en formulario de producto
-    document.getElementById('add-image').addEventListener('click', addImageInput);
+    const addImageBtn = document.getElementById('add-image');
+    if (addImageBtn) addImageBtn.addEventListener('click', addImageInput);
     
     // Event delegation para botones dinámicos
     document.addEventListener('click', function(e) {
@@ -334,6 +389,21 @@ function setupEventListeners() {
             const productId = e.target.closest('.cart-item-remove').dataset.id;
             removeFromCart(productId);
         }
+        
+        // Remover imagen en formulario de producto
+        if (e.target.closest('.btn-remove-image')) {
+            const imageInput = e.target.closest('.image-input');
+            if (imageInput) {
+                imageInput.remove();
+            }
+        }
+    });
+    
+    // Previsualización de imágenes en formulario de producto
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('image-file')) {
+            previewImage(e.target);
+        }
     });
 }
 
@@ -365,6 +435,8 @@ async function handleLogin(e) {
             errorMessage = "Usuario no encontrado";
         } else if (error.code === 'auth/wrong-password') {
             errorMessage = "Contraseña incorrecta";
+        } else if (error.code === 'auth/too-many-requests') {
+            errorMessage = "Demasiados intentos fallidos. Intenta más tarde";
         }
         
         showAuthError(errorMessage);
@@ -419,7 +491,9 @@ async function handleRegister(e) {
         showNotification("¡Cuenta creada exitosamente!", "success");
         
         // Redirigir a su tienda
-        window.location.href = `/?store=${user.uid}`;
+        setTimeout(() => {
+            window.location.href = `/?store=${user.uid}`;
+        }, 1500);
     } catch (error) {
         console.error("Error de registro:", error);
         
@@ -430,6 +504,8 @@ async function handleRegister(e) {
             errorMessage = "Correo electrónico inválido";
         } else if (error.code === 'auth/weak-password') {
             errorMessage = "La contraseña es demasiado débil";
+        } else if (error.code === 'auth/operation-not-allowed') {
+            errorMessage = "Operación no permitida";
         }
         
         showAuthError(errorMessage);
@@ -458,19 +534,39 @@ async function handleProductSubmit(e) {
         .filter(file => file);
     
     if (files.length === 0) {
-        showNotification("Debes agregar al menos una imagen", "error");
-        return;
+        // Si estamos editando y no hay archivos nuevos, mantener las existentes
+        const existingImages = document.querySelectorAll('.existing-image');
+        if (existingImages.length === 0) {
+            showNotification("Debes agregar al menos una imagen", "error");
+            return;
+        }
     }
     
     try {
         let imageUrls = [];
         
-        // Subir imágenes si hay archivos nuevos
-        if (files.some(file => file)) {
+        // Si hay archivos nuevos, subirlos
+        if (files.length > 0) {
             for (const file of files) {
+                if (file.size > 2 * 1024 * 1024) { // 2MB
+                    showNotification(`La imagen ${file.name} es demasiado grande (máximo 2MB)`, "error");
+                    return;
+                }
+                
                 const imageUrl = await window.uploadImage(file, appState.storeId);
                 imageUrls.push(imageUrl);
             }
+        } else if (productId) {
+            // Si estamos editando y no hay archivos nuevos, usar las imágenes existentes
+            const existingImages = document.querySelectorAll('.existing-image');
+            existingImages.forEach(input => {
+                if (input.value) imageUrls.push(input.value);
+            });
+        }
+        
+        if (imageUrls.length === 0) {
+            showNotification("Debes agregar al menos una imagen", "error");
+            return;
         }
         
         const productData = {
@@ -595,6 +691,7 @@ function copyStoreLink() {
             showNotification("Enlace copiado al portapapeles", "success");
         })
         .catch(() => {
+            // Fallback para navegadores antiguos
             elements.storeLinkInput.select();
             document.execCommand('copy');
             showNotification("Enlace copiado", "success");
@@ -627,9 +724,12 @@ function updateAuthUI() {
 async function handleLogout() {
     try {
         await window.firebaseServices.signOut(window.firebaseServices.auth);
+        
+        // Limpiar estado
         appState.currentUser = null;
         appState.currentStore = null;
         appState.products = [];
+        appState.isAdmin = false;
         
         // Restablecer UI
         elements.adminPanel.classList.add('hidden');
@@ -637,6 +737,15 @@ async function handleLogout() {
         elements.configBtn.classList.add('hidden');
         elements.myStoreBtn.classList.add('hidden');
         elements.storeName.textContent = "Cargando tienda...";
+        elements.catalogDescription.textContent = "Inicia sesión para administrar tu tienda";
+        
+        // Limpiar carrito
+        appState.cart = [];
+        saveCartToLocalStorage();
+        updateCartCount();
+        
+        // Redirigir a la página principal
+        window.location.href = '/';
         
         showNotification("Sesión cerrada", "success");
     } catch (error) {
@@ -701,11 +810,6 @@ function openAddProductModal() {
     document.getElementById('modal-title').textContent = "Agregar Producto";
     
     // Resetear inputs de imagen
-    const imageInputs = document.querySelectorAll('.image-input');
-    imageInputs.forEach((input, index) => {
-        if (index > 1) input.remove();
-    });
-    
     const imageContainer = document.querySelector('.image-inputs');
     imageContainer.innerHTML = `
         <div class="image-input">
@@ -745,6 +849,7 @@ function openEditProductModal(productId) {
             div.innerHTML = `
                 <input type="text" class="existing-image" value="${img}" readonly>
                 <span class="image-label">Imagen ${index + 1}</span>
+                <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
             `;
             imageContainer.appendChild(div);
         });
@@ -795,6 +900,24 @@ function addImageInput() {
         <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
     `;
     imageContainer.appendChild(div);
+}
+
+// Previsualizar imagen
+function previewImage(input) {
+    const previewContainer = document.querySelector('.preview-container');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            const imgElement = document.createElement('img');
+            imgElement.className = 'preview-image';
+            imgElement.src = e.target.result;
+            previewContainer.appendChild(imgElement);
+        };
+        
+        reader.readAsDataURL(input.files[0]);
+    }
 }
 
 // Función para abrir modal
@@ -1012,61 +1135,71 @@ function updateCartUI() {
     const summary = document.getElementById('cart-summary');
     
     if (appState.cart.length === 0) {
-        emptyState.classList.remove('hidden');
-        container.innerHTML = '';
-        summary.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (container) container.innerHTML = '';
+        if (summary) summary.classList.add('hidden');
         return;
     }
     
-    emptyState.classList.add('hidden');
-    summary.classList.remove('hidden');
+    if (emptyState) emptyState.classList.add('hidden');
+    if (summary) summary.classList.remove('hidden');
     
-    container.innerHTML = '';
-    
-    appState.cart.forEach(item => {
-        const cartItem = document.createElement('div');
-        cartItem.className = 'cart-item';
-        cartItem.dataset.id = item.productId;
+    if (container) {
+        container.innerHTML = '';
         
-        cartItem.innerHTML = `
-            <img src="${item.image || 'https://via.placeholder.com/100x100?text=Imagen'}" 
-                 alt="${item.name}" class="cart-item-image">
-            <div class="cart-item-details">
-                <div class="cart-item-name">${item.name}</div>
-                <div class="cart-item-price">$${item.price.toFixed(2)} c/u</div>
-                <div class="cart-item-quantity">
-                    <button class="quantity-btn decrease-quantity" data-id="${item.productId}">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <span class="quantity">${item.quantity}</span>
-                    <button class="quantity-btn increase-quantity" data-id="${item.productId}">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                    <button class="cart-item-remove" data-id="${item.productId}">
-                        <i class="fas fa-trash"></i>
-                    </button>
+        appState.cart.forEach(item => {
+            const cartItem = document.createElement('div');
+            cartItem.className = 'cart-item';
+            cartItem.dataset.id = item.productId;
+            
+            cartItem.innerHTML = `
+                <img src="${item.image || 'https://via.placeholder.com/100x100?text=Imagen'}" 
+                     alt="${item.name}" class="cart-item-image">
+                <div class="cart-item-details">
+                    <div class="cart-item-name">${item.name}</div>
+                    <div class="cart-item-price">$${item.price.toFixed(2)} c/u</div>
+                    <div class="cart-item-quantity">
+                        <button class="quantity-btn decrease-quantity" data-id="${item.productId}">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <span class="quantity">${item.quantity}</span>
+                        <button class="quantity-btn increase-quantity" data-id="${item.productId}">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="cart-item-remove" data-id="${item.productId}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `;
-        
-        container.appendChild(cartItem);
-    });
+            `;
+            
+            container.appendChild(cartItem);
+        });
+    }
     
-    elements.cartTotal.textContent = `$${calculateCartTotal().toFixed(2)}`;
+    if (elements.cartTotal) {
+        elements.cartTotal.textContent = `$${calculateCartTotal().toFixed(2)}`;
+    }
 }
 
 function saveCartToLocalStorage() {
-    localStorage.setItem(`cart_${appState.storeId}`, JSON.stringify(appState.cart));
+    if (appState.storeId) {
+        localStorage.setItem(`cart_${appState.storeId}`, JSON.stringify(appState.cart));
+    }
 }
 
 function loadCartFromLocalStorage() {
-    const savedCart = localStorage.getItem(`cart_${appState.storeId}`);
-    if (savedCart) {
-        try {
-            appState.cart = JSON.parse(savedCart);
-            updateCartCount();
-        } catch (error) {
-            console.error("Error cargando carrito:", error);
+    if (appState.storeId) {
+        const savedCart = localStorage.getItem(`cart_${appState.storeId}`);
+        if (savedCart) {
+            try {
+                appState.cart = JSON.parse(savedCart);
+                updateCartCount();
+                updateCartUI();
+            } catch (error) {
+                console.error("Error cargando carrito:", error);
+                appState.cart = [];
+            }
         }
     }
 }
@@ -1104,9 +1237,11 @@ function checkoutViaWhatsApp() {
     window.open(whatsappUrl, '_blank');
     
     // Opcional: vaciar carrito después
-    if (confirm("¿Deseas vaciar el carrito después de enviar el pedido?")) {
-        clearCart();
-    }
+    setTimeout(() => {
+        if (confirm("¿Deseas vaciar el carrito después de enviar el pedido?")) {
+            clearCart();
+        }
+    }, 500);
 }
 
 // Mostrar notificación
