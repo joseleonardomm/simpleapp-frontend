@@ -482,17 +482,18 @@
             getDoc,
             updateDoc,
             orderBy,
-            limit
+            limit,
+            serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Tu configuración de Firebase (REEMPLAZA CON TU CONFIGURACIÓN)
+        // TU CONFIGURACIÓN DE FIREBASE - REEMPLAZADA
         const firebaseConfig = {
-            apiKey: "AIzaSyCHZyggxJ80jJv4mE2a-tryJB28jGJcCHg",
-            authDomain: "catalogo-digital-12c79.firebaseapp.com",
-            projectId: "catalogo-digital-12c79",
-            storageBucket: "catalogo-digital-12c79.appspot.com",
-            messagingSenderId: "510384545766",
-            appId: "1:510384545766:web:ff64fa3bc4de72dfe8caf6"
+            apiKey: "AIzaSyAeH1V2rJvmZ65oMr4PCdK3Uc4__PwgUdc",
+            authDomain: "catalogo-digital-backend.firebaseapp.com",
+            projectId: "catalogo-digital-backend",
+            storageBucket: "catalogo-digital-backend.firebasestorage.app",
+            messagingSenderId: "463389938850",
+            appId: "1:463389938850:web:9f8ebaca6c10729f44f3fb"
         };
 
         // Initialize Firebase
@@ -544,6 +545,12 @@
             
             const email = document.getElementById('adminEmail').value;
             const password = document.getElementById('adminPassword').value;
+            
+            // Auto-fill password for convenience (puedes eliminar esto en producción)
+            if (!password && email === "jmcristiano7.18@gmail.com") {
+                document.getElementById('adminPassword').value = "Cronaldo7..";
+                password = "Cronaldo7..";
+            }
             
             try {
                 showMessage(loginMessage, 'Iniciando sesión...', 'warning');
@@ -610,54 +617,69 @@
                 showMessage(searchMessage, 'Buscando usuario...', 'warning');
                 userResult.classList.remove('show');
                 
-                // Search in users collection
-                const usersRef = collection(db, "users");
-                const q = query(usersRef, where("email", "==", email));
-                const querySnapshot = await getDocs(q);
+                // First, try to find user in Firestore by email
+                let userFound = false;
                 
-                if (querySnapshot.empty) {
-                    // Try searching in stores collection
-                    const storesRef = collection(db, "stores");
-                    const storeQ = query(storesRef, where("ownerEmail", "==", email));
-                    const storeSnapshot = await getDocs(storeQ);
+                // Method 1: Search in users collection (if you have one)
+                try {
+                    const usersRef = collection(db, "users");
+                    const q = query(usersRef, where("email", "==", email));
+                    const querySnapshot = await getDocs(q);
                     
-                    if (storeSnapshot.empty) {
-                        showMessage(searchMessage, 'Usuario no encontrado', 'error');
-                        return;
-                    }
-                    
-                    // Found in stores, now get user data
-                    const storeDoc = storeSnapshot.docs[0];
-                    const storeData = storeDoc.data();
-                    
-                    // Try to get user document
-                    const userDocRef = doc(db, "users", storeDoc.id);
-                    const userDocSnap = await getDoc(userDocRef);
-                    
-                    if (userDocSnap.exists()) {
+                    if (!querySnapshot.empty) {
+                        const userDoc = querySnapshot.docs[0];
                         currentUserDoc = {
-                            id: storeDoc.id,
-                            ref: userDocRef,
-                            ...userDocSnap.data()
+                            id: userDoc.id,
+                            ref: doc(db, "users", userDoc.id),
+                            ...userDoc.data()
                         };
-                    } else {
-                        // Create user data from store
-                        currentUserDoc = {
-                            id: storeDoc.id,
-                            ref: userDocRef,
-                            email: storeData.ownerEmail,
-                            storeName: storeData.storeName,
-                            enabled: false // Default
-                        };
+                        userFound = true;
                     }
-                } else {
-                    // Found in users collection
-                    const userDoc = querySnapshot.docs[0];
-                    currentUserDoc = {
-                        id: userDoc.id,
-                        ref: doc(db, "users", userDoc.id),
-                        ...userDoc.data()
-                    };
+                } catch (error) {
+                    console.log("No users collection or error:", error);
+                }
+                
+                // Method 2: Search in stores collection by ownerEmail
+                if (!userFound) {
+                    try {
+                        const storesRef = collection(db, "stores");
+                        const storeQ = query(storesRef, where("ownerEmail", "==", email));
+                        const storeSnapshot = await getDocs(storeQ);
+                        
+                        if (!storeSnapshot.empty) {
+                            const storeDoc = storeSnapshot.docs[0];
+                            const storeData = storeDoc.data();
+                            
+                            // Check if user exists in users collection
+                            const userDocRef = doc(db, "users", storeDoc.id);
+                            const userDocSnap = await getDoc(userDocRef);
+                            
+                            if (userDocSnap.exists()) {
+                                currentUserDoc = {
+                                    id: storeDoc.id,
+                                    ref: userDocRef,
+                                    ...userDocSnap.data()
+                                };
+                            } else {
+                                // Create user data from store
+                                currentUserDoc = {
+                                    id: storeDoc.id,
+                                    ref: userDocRef,
+                                    email: storeData.ownerEmail,
+                                    storeName: storeData.storeName,
+                                    enabled: false // Default
+                                };
+                            }
+                            userFound = true;
+                        }
+                    } catch (error) {
+                        console.log("Error searching stores:", error);
+                    }
+                }
+                
+                if (!userFound) {
+                    showMessage(searchMessage, 'Usuario no encontrado en la base de datos', 'error');
+                    return;
                 }
                 
                 // Display user info
@@ -667,9 +689,11 @@
                     currentUserDoc.email || email;
                 document.getElementById('foundUserId').textContent = currentUserDoc.id;
                 
-                // Update status
+                // Update status - check if enabled field exists
                 const statusElement = document.getElementById('userStatus');
-                if (currentUserDoc.enabled) {
+                const isEnabled = currentUserDoc.enabled === true;
+                
+                if (isEnabled) {
                     statusElement.textContent = "Activo";
                     statusElement.className = "user-status status-active";
                     activateBtn.disabled = true;
@@ -694,17 +718,24 @@
         activateBtn.addEventListener('click', async () => {
             if (!currentUserDoc) return;
             
-            if (!confirm(`¿Activar la cuenta de ${currentUserDoc.email}?`)) return;
+            if (!confirm(`¿Activar la cuenta de ${currentUserDoc.email || currentUserDoc.id}?`)) return;
             
             try {
-                await updateDoc(currentUserDoc.ref, {
+                const updateData = {
                     enabled: true,
                     enabledAt: new Date(),
                     enabledBy: "jmcristiano7.18@gmail.com",
-                    updatedAt: new Date()
-                });
+                    updatedAt: serverTimestamp()
+                };
                 
-                showMessage(searchMessage, 'Cuenta activada correctamente', 'success');
+                // Add email if not present
+                if (!currentUserDoc.email) {
+                    updateData.email = userEmailInput.value.trim();
+                }
+                
+                await updateDoc(currentUserDoc.ref, updateData);
+                
+                showMessage(searchMessage, '✅ Cuenta activada correctamente', 'success');
                 
                 // Update UI
                 const statusElement = document.getElementById('userStatus');
@@ -713,12 +744,15 @@
                 activateBtn.disabled = true;
                 deactivateBtn.disabled = false;
                 
+                // Update currentUserDoc
+                currentUserDoc.enabled = true;
+                
                 // Reload users list
                 loadUsersList();
                 
             } catch (error) {
                 console.error("Activation error:", error);
-                showMessage(searchMessage, 'Error activando cuenta: ' + error.message, 'error');
+                showMessage(searchMessage, '❌ Error activando cuenta: ' + error.message, 'error');
             }
         });
 
@@ -726,17 +760,17 @@
         deactivateBtn.addEventListener('click', async () => {
             if (!currentUserDoc) return;
             
-            if (!confirm(`¿Desactivar la cuenta de ${currentUserDoc.email}?`)) return;
+            if (!confirm(`¿Desactivar la cuenta de ${currentUserDoc.email || currentUserDoc.id}?`)) return;
             
             try {
                 await updateDoc(currentUserDoc.ref, {
                     enabled: false,
                     disabledAt: new Date(),
                     disabledBy: "jmcristiano7.18@gmail.com",
-                    updatedAt: new Date()
+                    updatedAt: serverTimestamp()
                 });
                 
-                showMessage(searchMessage, 'Cuenta desactivada correctamente', 'success');
+                showMessage(searchMessage, '✅ Cuenta desactivada correctamente', 'success');
                 
                 // Update UI
                 const statusElement = document.getElementById('userStatus');
@@ -745,12 +779,15 @@
                 activateBtn.disabled = false;
                 deactivateBtn.disabled = true;
                 
+                // Update currentUserDoc
+                currentUserDoc.enabled = false;
+                
                 // Reload users list
                 loadUsersList();
                 
             } catch (error) {
                 console.error("Deactivation error:", error);
-                showMessage(searchMessage, 'Error desactivando cuenta: ' + error.message, 'error');
+                showMessage(searchMessage, '❌ Error desactivando cuenta: ' + error.message, 'error');
             }
         });
 
@@ -760,15 +797,59 @@
 
         async function loadUsersList() {
             try {
-                const usersRef = collection(db, "users");
-                const q = query(usersRef, orderBy("createdAt", "desc"), limit(50));
-                const querySnapshot = await getDocs(q);
+                // Try to get users from users collection
+                let users = [];
                 
-                if (querySnapshot.empty) {
+                try {
+                    const usersRef = collection(db, "users");
+                    const q = query(usersRef, orderBy("createdAt", "desc"), limit(50));
+                    const querySnapshot = await getDocs(q);
+                    
+                    querySnapshot.forEach((docSnapshot) => {
+                        users.push({
+                            id: docSnapshot.id,
+                            ...docSnapshot.data()
+                        });
+                    });
+                } catch (error) {
+                    console.log("No users collection or error:", error);
+                    
+                    // Fallback: Get users from stores collection
+                    const storesRef = collection(db, "stores");
+                    const storeQ = query(storesRef, orderBy("createdAt", "desc"), limit(50));
+                    const storeSnapshot = await getDocs(storeQ);
+                    
+                    storeSnapshot.forEach((docSnapshot) => {
+                        const storeData = docSnapshot.data();
+                        users.push({
+                            id: docSnapshot.id,
+                            email: storeData.ownerEmail,
+                            storeName: storeData.storeName,
+                            enabled: false // Default for stores
+                        });
+                    });
+                }
+                
+                if (users.length === 0) {
                     usersList.innerHTML = '<p class="message warning">No hay usuarios registrados</p>';
                     return;
                 }
                 
+                // Fetch enabled status for each user
+                for (let user of users) {
+                    try {
+                        const userDocRef = doc(db, "users", user.id);
+                        const userDocSnap = await getDoc(userDocRef);
+                        
+                        if (userDocSnap.exists()) {
+                            user.enabled = userDocSnap.data().enabled || false;
+                        }
+                    } catch (error) {
+                        user.enabled = false;
+                    }
+                }
+                
+                // Render users table
                 let html = `
                     <table class="users-table">
                         <thead>
@@ -782,10 +863,7 @@
                         <tbody>
                 `;
                 
-                querySnapshot.forEach((docSnapshot) => {
-                    const user = docSnapshot.data();
-                    const userId = docSnapshot.id;
-                    
+                users.forEach((user) => {
                     html += `
                         <tr>
                             <td>${user.email || 'No especificado'}</td>
@@ -796,7 +874,7 @@
                                 </span>
                             </td>
                             <td>
-                                <button onclick="quickToggle('${userId}', ${!user.enabled})" 
+                                <button onclick="quickToggle('${user.id}', ${!user.enabled}, '${user.email || ''}')" 
                                         class="status-toggle ${user.enabled ? 'btn-danger' : 'btn-success'}">
                                     ${user.enabled ? 'Desactivar' : 'Activar'}
                                 </button>
@@ -808,6 +886,9 @@
                 html += `
                         </tbody>
                     </table>
+                    <p class="message info" style="margin-top: 10px; background: #d1ecf1; color: #0c5460;">
+                        <i class="fas fa-info-circle"></i> Mostrando ${users.length} usuarios
+                    </p>
                 `;
                 
                 usersList.innerHTML = html;
@@ -816,28 +897,43 @@
                 console.error("Error loading users:", error);
                 usersList.innerHTML = `
                     <p class="message error">
-                        Error cargando usuarios: ${error.message}
+                        <i class="fas fa-exclamation-triangle"></i> Error cargando usuarios: ${error.message}
                     </p>
                 `;
             }
         }
 
         // Quick toggle function (available globally)
-        window.quickToggle = async (userId, newState) => {
+        window.quickToggle = async (userId, newState, userEmail) => {
             const action = newState ? 'activar' : 'desactivar';
+            const emailText = userEmail ? ` (${userEmail})` : '';
             
-            if (!confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} esta cuenta?`)) return;
+            if (!confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} la cuenta${emailText}?`)) return;
             
             try {
                 const userRef = doc(db, "users", userId);
-                await updateDoc(userRef, {
+                
+                // First, check if document exists
+                const userDoc = await getDoc(userRef);
+                const updateData = {
                     enabled: newState,
-                    updatedAt: new Date(),
+                    updatedAt: serverTimestamp(),
                     [newState ? 'enabledBy' : 'disabledBy']: "jmcristiano7.18@gmail.com",
                     [newState ? 'enabledAt' : 'disabledAt']: new Date()
-                });
+                };
                 
-                showMessage(searchMessage, `Cuenta ${action}da correctamente`, 'success');
+                if (userDoc.exists()) {
+                    await updateDoc(userRef, updateData);
+                } else {
+                    // Create user document if it doesn't exist
+                    await updateDoc(userRef, {
+                        ...updateData,
+                        email: userEmail || '',
+                        createdAt: serverTimestamp()
+                    });
+                }
+                
+                showMessage(searchMessage, `✅ Cuenta ${action}da correctamente`, 'success');
                 loadUsersList();
                 
                 // Update current user if it's the same
@@ -852,7 +948,7 @@
                 
             } catch (error) {
                 console.error("Toggle error:", error);
-                showMessage(searchMessage, `Error al ${action} cuenta: ${error.message}`, 'error');
+                showMessage(searchMessage, `❌ Error al ${action} cuenta: ${error.message}`, 'error');
             }
         };
 
@@ -873,11 +969,23 @@
             }
         }
 
-        // Auto-login for testing (remove in production)
-        // Uncomment the line below if you want to auto-fill the password
-        // document.getElementById('adminPassword').value = "Cronaldo7..";
-        
-        console.log("Panel de administración cargado. Usa jmcristiano7.18@gmail.com para acceder.");
+        // Auto-fill password for convenience during development
+        // Remove this in production!
+        document.addEventListener('DOMContentLoaded', () => {
+            const emailInput = document.getElementById('adminEmail');
+            const passwordInput = document.getElementById('adminPassword');
+            
+            if (emailInput && emailInput.value === "jmcristiano7.18@gmail.com") {
+                // Only auto-fill if field is empty
+                if (!passwordInput.value) {
+                    passwordInput.value = "Cronaldo7..";
+                }
+            }
+            
+            console.log("✅ Panel de administración cargado");
+            console.log("📧 Usuario admin: jmcristiano7.18@gmail.com");
+            console.log("🔒 Proyecto Firebase: catalogo-digital-backend");
+        });
     </script>
 </body>
 </html>

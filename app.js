@@ -7,7 +7,8 @@ let appState = {
     products: [],
     cart: [],
     storeId: null,
-    isAdmin: false
+    isAdmin: false,
+    userEnabled: false  // Nuevo campo para verificar si el usuario está habilitado
 };
 
 // Referencias a elementos DOM
@@ -127,17 +128,20 @@ async function setupFirebaseAuth() {
                 appState.currentUser = user;
                 console.log("Usuario autenticado:", { uid: user.uid, email: user.email });
                 
+                // Verificar si es el administrador
+                if (user.email === "jmcristiano7.18@gmail.com") {
+                    appState.isAdmin = true;
+                    console.log("Usuario es el administrador principal");
+                }
+                
                 // Si no hay storeId en URL, usar el ID del usuario
                 if (!appState.storeId) {
                     appState.storeId = user.uid;
-                    appState.isAdmin = true;
                     console.log("Modo ADMIN activado para usuario:", user.uid);
                     await loadUserStore(user.uid);
                 } else {
                     // Si hay storeId en URL, verificar si es el propietario
                     if (appState.storeId === user.uid) {
-                        appState.isAdmin = true;
-                        console.log("Usuario es propietario de esta tienda");
                         await loadUserStore(user.uid);
                     }
                 }
@@ -147,6 +151,7 @@ async function setupFirebaseAuth() {
                 // Usuario no autenticado
                 console.log("Usuario NO autenticado");
                 appState.currentUser = null;
+                appState.userEnabled = false;
                 updateAuthUI();
             }
         });
@@ -164,8 +169,43 @@ async function loadUserStore(storeId) {
     console.log("Usuario actual:", appState.currentUser?.uid);
     
     try {
-        const { db, doc, getDoc } = window.firebaseServices;
+        const { db, doc, getDoc, setDoc, serverTimestamp } = window.firebaseServices;
         
+        // 1. Verificar si el usuario está habilitado
+        console.log("Verificando estado de usuario...");
+        const userDocRef = doc(db, "users", storeId);
+        const userSnap = await getDoc(userDocRef);
+        
+        if (!userSnap.exists()) {
+            // Crear documento de usuario si no existe
+            console.log("Usuario no existe en Firestore, creando...");
+            await setDoc(userDocRef, {
+                email: appState.currentUser.email,
+                storeId: storeId,
+                enabled: false, // Por defecto desactivado
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+            
+            appState.userEnabled = false;
+            showAccountDisabledMessage();
+            
+        } else {
+            // Verificar estado de habilitación
+            const userData = userSnap.data();
+            const isEnabled = userData.enabled === true;
+            appState.userEnabled = isEnabled;
+            
+            if (!isEnabled) {
+                console.log("Usuario NO está habilitado");
+                showAccountDisabledMessage();
+                return;
+            }
+            
+            console.log("Usuario está habilitado, continuando...");
+        }
+        
+        // 2. Cargar tienda (solo si el usuario está habilitado)
         console.log("Buscando tienda en Firestore...");
         const storeRef = doc(db, "stores", storeId);
         const storeSnap = await getDoc(storeRef);
@@ -177,12 +217,15 @@ async function loadUserStore(storeId) {
             elements.storeIdDisplay.textContent = storeId;
             await loadStoreProducts(storeId);
             
-            // Mostrar panel de administración
-            console.log("Mostrando panel de administración...");
-            elements.adminPanel.classList.remove('hidden');
-            elements.catalogPanel.classList.add('hidden');
-            elements.configBtn.classList.remove('hidden');
-            elements.myStoreBtn.classList.remove('hidden');
+            // Mostrar panel de administración solo si el usuario está habilitado
+            if (appState.userEnabled) {
+                console.log("Mostrando panel de administración...");
+                elements.adminPanel.classList.remove('hidden');
+                elements.catalogPanel.classList.add('hidden');
+                elements.configBtn.classList.remove('hidden');
+                elements.myStoreBtn.classList.remove('hidden');
+                elements.addProduct.classList.remove('hidden');
+            }
             
             // Cargar carrito
             loadCartFromLocalStorage();
@@ -191,10 +234,35 @@ async function loadUserStore(storeId) {
             // Crear tienda si no existe
             await createStoreForUser(storeId);
         }
+        
     } catch (error) {
         console.error("Error cargando tienda:", error);
         showNotification("Error cargando tienda", "error");
     }
+}
+
+// Mostrar mensaje de cuenta deshabilitada
+function showAccountDisabledMessage() {
+    console.log("Mostrando mensaje de cuenta deshabilitada");
+    
+    // Ocultar panel de administración
+    elements.adminPanel.classList.add('hidden');
+    elements.catalogPanel.classList.remove('hidden');
+    elements.configBtn.classList.add('hidden');
+    elements.addProduct.classList.add('hidden');
+    
+    // Mostrar mensaje al usuario
+    elements.catalogDescription.innerHTML = `
+        <div style="text-align: center; padding: 30px;">
+            <h3><i class="fas fa-hourglass-half"></i> Cuenta Pendiente de Activación</h3>
+            <p>Tu cuenta está pendiente de activación por el administrador.</p>
+            <p>Una vez activada, podrás acceder a todas las funciones de tu tienda.</p>
+            <p>Para más información, contacta al administrador.</p>
+        </div>
+    `;
+    
+    // Mostrar notificación
+    showNotification("Tu cuenta está pendiente de activación", "warning");
 }
 
 // Cargar tienda para cliente
@@ -212,9 +280,10 @@ async function loadStoreForCustomer(storeId) {
             elements.storeName.textContent = appState.currentStore.storeName;
             elements.catalogDescription.textContent = `Explora los productos de ${appState.currentStore.storeName}`;
             
-            // Ocultar botones de administración
+            // Ocultar botones de administración (modo cliente)
             elements.authBtn.classList.add('hidden');
             elements.configBtn.classList.add('hidden');
+            elements.myStoreBtn.classList.add('hidden');
             
             await loadStoreProducts(storeId);
             
@@ -249,11 +318,14 @@ async function createStoreForUser(storeId) {
         elements.storeName.textContent = "Mi Tienda";
         elements.storeIdDisplay.textContent = storeId;
         
-        // Mostrar panel de administración
-        elements.adminPanel.classList.remove('hidden');
-        elements.catalogPanel.classList.add('hidden');
-        elements.configBtn.classList.remove('hidden');
-        elements.myStoreBtn.classList.remove('hidden');
+        // Solo mostrar panel de administración si el usuario está habilitado
+        if (appState.userEnabled) {
+            elements.adminPanel.classList.remove('hidden');
+            elements.catalogPanel.classList.add('hidden');
+            elements.configBtn.classList.remove('hidden');
+            elements.myStoreBtn.classList.remove('hidden');
+            elements.addProduct.classList.remove('hidden');
+        }
         
         // Cargar carrito
         loadCartFromLocalStorage();
@@ -469,11 +541,30 @@ async function handleRegister(e) {
     }
     
     try {
-        const { auth, createUserWithEmailAndPassword, db, doc, setDoc, serverTimestamp } = window.firebaseServices;
+        const { 
+            auth, 
+            createUserWithEmailAndPassword, 
+            db, 
+            doc, 
+            setDoc, 
+            serverTimestamp 
+        } = window.firebaseServices;
         
-        // Crear usuario
+        // Crear usuario en Authentication
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+        
+        // Crear documento de usuario en Firestore (deshabilitado por defecto)
+        const userData = {
+            email: email,
+            storeId: user.uid,
+            storeName: storeName,
+            enabled: false, // Deshabilitado hasta que el admin lo active
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+        
+        await setDoc(doc(db, "users", user.uid), userData);
         
         // Crear tienda
         const storeData = {
@@ -488,12 +579,15 @@ async function handleRegister(e) {
         await setDoc(doc(db, "stores", user.uid), storeData);
         
         closeAllModals();
-        showNotification("¡Cuenta creada exitosamente!", "success");
         
-        // Redirigir a su tienda
+        // Mostrar mensaje especial para registro
+        showNotification("¡Cuenta creada exitosamente! Pendiente de activación por el administrador.", "warning");
+        
+        // Redirigir a su tienda (pero estará deshabilitada hasta que la actives)
         setTimeout(() => {
             window.location.href = `/?store=${user.uid}`;
-        }, 1500);
+        }, 2000);
+        
     } catch (error) {
         console.error("Error de registro:", error);
         
@@ -515,6 +609,12 @@ async function handleRegister(e) {
 // Manejar producto
 async function handleProductSubmit(e) {
     e.preventDefault();
+    
+    // Verificar que el usuario esté habilitado
+    if (!appState.userEnabled) {
+        showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
+        return;
+    }
     
     const productId = elements.productId.value;
     const name = elements.productName.value.trim();
@@ -644,6 +744,12 @@ async function deleteProduct(productId) {
 
 // Guardar configuración de tienda
 async function saveStoreConfig() {
+    // Verificar que el usuario esté habilitado
+    if (!appState.userEnabled) {
+        showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
+        return;
+    }
+    
     const whatsapp = elements.whatsappNumber.value.trim();
     const storeName = elements.storeDisplayName.value.trim();
     
@@ -729,13 +835,14 @@ async function handleLogout() {
         appState.currentUser = null;
         appState.currentStore = null;
         appState.products = [];
-        appState.isAdmin = false;
+        appState.userEnabled = false;
         
         // Restablecer UI
         elements.adminPanel.classList.add('hidden');
         elements.catalogPanel.classList.remove('hidden');
         elements.configBtn.classList.add('hidden');
         elements.myStoreBtn.classList.add('hidden');
+        elements.addProduct.classList.add('hidden');
         elements.storeName.textContent = "Cargando tienda...";
         elements.catalogDescription.textContent = "Inicia sesión para administrar tu tienda";
         
@@ -799,12 +906,24 @@ function openAuthModal() {
 
 // Abrir modal de configuración
 function openConfigModal() {
+    // Verificar que el usuario esté habilitado
+    if (!appState.userEnabled) {
+        showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
+        return;
+    }
+    
     loadStoreConfig();
     openModal(elements.configModal);
 }
 
 // Abrir modal para agregar producto
 function openAddProductModal() {
+    // Verificar que el usuario esté habilitado
+    if (!appState.userEnabled) {
+        showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
+        return;
+    }
+    
     elements.productForm.reset();
     elements.productId.value = "";
     document.getElementById('modal-title').textContent = "Agregar Producto";
@@ -828,6 +947,12 @@ function openAddProductModal() {
 
 // Abrir modal para editar producto
 function openEditProductModal(productId) {
+    // Verificar que el usuario esté habilitado
+    if (!appState.userEnabled) {
+        showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
+        return;
+    }
+    
     const product = appState.products.find(p => p.id === productId);
     if (!product) return;
     
@@ -941,7 +1066,7 @@ function updateUI() {
     updateCartCount();
     
     // Renderizar productos según el modo
-    if (appState.isAdmin) {
+    if (appState.currentUser && appState.userEnabled && appState.storeId === appState.currentUser.uid) {
         renderAdminProducts();
     } else {
         renderCatalogProducts();
@@ -1012,8 +1137,8 @@ function createProductCard(product, isAdmin) {
     
     let actionsHTML = '';
     
-    if (isAdmin) {
-        // Acciones para administrador
+    if (isAdmin && appState.userEnabled) {
+        // Acciones para administrador (solo si está habilitado)
         actionsHTML = `
             <div class="product-actions">
                 <button class="btn btn-secondary edit-product" data-id="${product.id}">
@@ -1022,6 +1147,16 @@ function createProductCard(product, isAdmin) {
                 <button class="btn btn-danger delete-product" data-id="${product.id}">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
+            </div>
+        `;
+    } else if (isAdmin && !appState.userEnabled) {
+        // Mensaje para administrador no habilitado
+        actionsHTML = `
+            <div class="product-actions">
+                <p style="color: #dc3545; font-size: 0.9rem; margin: 10px 0;">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    Tu cuenta no está activada. No puedes editar productos.
+                </p>
             </div>
         `;
     } else {
@@ -1213,7 +1348,10 @@ function checkoutViaWhatsApp() {
     
     if (!appState.currentStore || !appState.currentStore.whatsappNumber) {
         showNotification("La tienda no tiene WhatsApp configurado", "error");
-        openConfigModal();
+        // Si el usuario es el propietario y está habilitado, abrir configuración
+        if (appState.currentUser && appState.userEnabled && appState.storeId === appState.currentUser.uid) {
+            openConfigModal();
+        }
         return;
     }
     
@@ -1256,7 +1394,7 @@ function showNotification(message, type = "success") {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'exclamation-triangle'}"></i>
         <span>${message}</span>
     `;
     
