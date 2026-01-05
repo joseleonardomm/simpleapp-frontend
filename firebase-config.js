@@ -138,19 +138,3 @@ window.deleteImage = async (imageUrl) => {
         return false;
     }
 };
-
-// firebase-config.js - Agregar al final
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
-
-// ... después de inicializar Firebase ...
-
-const functions = getFunctions(app);
-
-// Exportar funciones
-window.firebaseServices = {
-    // ... tus exportaciones actuales ...
-    
-    // Functions
-    functions,
-    httpsCallable
-};

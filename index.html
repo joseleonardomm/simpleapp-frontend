@@ -275,56 +275,6 @@
                     <p>No hay productos disponibles en este momento</p>
                 </div>
             </div>
-<!-- Modal de administración de membresías -->
-<div id="membership-modal" class="modal">
-    <div class="modal-content modal-large">
-        <div class="modal-header">
-            <h2>Administración de Membresías</h2>
-            <button class="close-modal">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="admin-tabs">
-                <button class="tab-btn active" data-tab="users">Usuarios</button>
-                <button class="tab-btn" data-tab="plans">Planes</button>
-                <button class="tab-btn" data-tab="payments">Pagos</button>
-            </div>
-            
-            <!-- Tab Usuarios -->
-            <div id="tab-users" class="tab-content active">
-                <div class="search-box">
-                    <input type="text" id="user-search" placeholder="Buscar por email o ID..." class="form-input">
-                </div>
-                
-                <div id="users-list" class="users-list">
-                    <!-- Usuarios se cargarán aquí -->
-                </div>
-                
-                <div id="user-details" class="user-details hidden">
-                    <!-- Detalles del usuario se cargarán aquí -->
-                </div>
-            </div>
-            
-            <!-- Tab Planes -->
-            <div id="tab-plans" class="tab-content">
-                <div id="membership-plans" class="plans-container">
-                    <!-- Planes se cargarán aquí -->
-                </div>
-            </div>
-            
-            <!-- Tab Pagos -->
-            <div id="tab-payments" class="tab-content">
-                <div id="payments-list" class="payments-list">
-                    <!-- Historial de pagos se cargará aquí -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Botón para abrir administración de membresías (solo visible para admin) -->
-<button id="membership-admin-btn" class="btn btn-secondary hidden">
-    <i class="fas fa-crown"></i> Membresías
-</button>
         </section>
     </main>
 
