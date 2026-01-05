@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Catálogo Digital</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #25D366;
+            --primary-dark: #128C7E;
+            --secondary-color: #075E54;
+            --danger-color: #dc3545;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --gray-color: #6c757d;
+            --light-gray: #e9ecef;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--secondary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 1.5rem;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        /* Login Screen */
+        .login-screen {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .login-screen h2 {
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+
+        .login-screen p {
+            color: var(--gray-color);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.2);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: var(--dark-color);
+        }
+
+        /* Admin Panel */
+        .admin-panel {
+            display: none;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .search-section {
+            background: var(--light-gray);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .user-result {
+            background: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .user-result.show {
+            display: block;
+        }
+
+        .user-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .user-status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Users List */
+        .users-section h3 {
+            margin-bottom: 20px;
+            color: var(--secondary-color);
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .users-table th {
+            background: var(--light-gray);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--dark-color);
+            border-bottom: 2px solid #ddd;
+        }
+
+        .users-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .users-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .status-toggle {
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            border: none;
+        }
+
+        /* Messages */
+        .message {
+            padding: 12px 15px;
+            border-radius: var(--border-radius);
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--gray-color);
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Logout Button */
+        .logout-btn {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .search-box {
+                flex-direction: column;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            .users-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-user-shield"></i> Panel de Administración</h1>
+            <p>Catálogo Digital - Activación Manual de Cuentas</p>
+        </div>
+        
+        <div class="content">
+            <!-- Login Screen -->
+            <div id="loginScreen" class="login-screen">
+                <h2><i class="fas fa-lock"></i> Acceso Restringido</h2>
+                <p>Ingresa tus credenciales de administrador</p>
+                
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="adminEmail">Correo Electrónico:</label>
+                        <input type="email" id="adminEmail" value="jmcristiano7.18@gmail.com" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="adminPassword">Contraseña:</label>
+                        <input type="password" id="adminPassword" placeholder="Ingresa tu contraseña" required>
+                    </div>
+                    
+                    <div id="loginMessage" class="message" style="display: none;"></div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Admin Panel (hidden by default) -->
+            <div id="adminPanel" class="admin-panel">
+                <div class="admin-header">
+                    <div class="user-info">
+                        <div class="user-avatar">J</div>
+                        <div>
+                            <h3 id="adminName">Administrador</h3>
+                            <small id="adminEmailDisplay">jmcristiano7.18@gmail.com</small>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                    </button>
+                </div>
+                
+                <div class="search-section">
+                    <h3><i class="fas fa-search"></i> Buscar y Gestionar Usuario</h3>
+                    <p>Ingresa el correo electrónico del usuario que deseas activar o desactivar</p>
+                    
+                    <div class="search-box">
+                        <input type="email" id="userEmail" placeholder="ejemplo@correo.com">
+                        <button id="searchUserBtn" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                    
+                    <div id="searchMessage" class="message" style="display: none;"></div>
+                    
+                    <div id="userResult" class="user-result">
+                        <div class="user-details">
+                            <div>
+                                <h4 id="foundUserName">Nombre del Usuario</h4>
+                                <p id="foundUserEmail">correo@ejemplo.com</p>
+                                <p>ID: <span id="foundUserId">user123</span></p>
+                            </div>
+                            <div>
+                                <span id="userStatus" class="user-status status-inactive">Inactivo</span>
+                            </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button id="activateBtn" class="btn btn-success">
+                                <i class="fas fa-check-circle"></i> Activar Cuenta
+                            </button>
+                            <button id="deactivateBtn" class="btn btn-danger">
+                                <i class="fas fa-ban"></i> Desactivar Cuenta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Users List -->
+                <div class="users-section">
+                    <h3><i class="fas fa-users"></i> Últimos Usuarios Registrados</h3>
+                    <div id="usersList">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i> Cargando usuarios...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { 
+            getFirestore,
+            collection,
+            query,
+            where,
+            getDocs,
+            doc,
+            getDoc,
+            updateDoc,
+            orderBy,
+            limit
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Tu configuración de Firebase (REEMPLAZA CON TU CONFIGURACIÓN)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCHZyggxJ80jJv4mE2a-tryJB28jGJcCHg",
+            authDomain: "catalogo-digital-12c79.firebaseapp.com",
+            projectId: "catalogo-digital-12c79",
+            storageBucket: "catalogo-digital-12c79.appspot.com",
+            messagingSenderId: "510384545766",
+            appId: "1:510384545766:web:ff64fa3bc4de72dfe8caf6"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // DOM Elements
+        const loginScreen = document.getElementById('loginScreen');
+        const adminPanel = document.getElementById('adminPanel');
+        const loginForm = document.getElementById('loginForm');
+        const loginMessage = document.getElementById('loginMessage');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userEmailInput = document.getElementById('userEmail');
+        const searchUserBtn = document.getElementById('searchUserBtn');
+        const userResult = document.getElementById('userResult');
+        const searchMessage = document.getElementById('searchMessage');
+        const activateBtn = document.getElementById('activateBtn');
+        const deactivateBtn = document.getElementById('deactivateBtn');
+        const usersList = document.getElementById('usersList');
+
+        // Current user being viewed
+        let currentUserDoc = null;
+
+        // ======================
+        // AUTHENTICATION
+        // ======================
+
+        // Check auth state
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.email === "jmcristiano7.18@gmail.com") {
+                // Admin is logged in
+                loginScreen.style.display = 'none';
+                adminPanel.style.display = 'block';
+                loadUsersList();
+            } else {
+                // Not logged in or not the admin
+                loginScreen.style.display = 'block';
+                adminPanel.style.display = 'none';
+                
+                // Auto-fill email for convenience
+                document.getElementById('adminEmail').value = "jmcristiano7.18@gmail.com";
+            }
+        });
+
+        // Login form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            
+            try {
+                showMessage(loginMessage, 'Iniciando sesión...', 'warning');
+                
+                await signInWithEmailAndPassword(auth, email, password);
+                
+                showMessage(loginMessage, 'Sesión iniciada correctamente', 'success');
+                
+                // Verify it's the correct admin
+                if (email !== "jmcristiano7.18@gmail.com") {
+                    showMessage(loginMessage, 'Acceso denegado. Solo el administrador puede acceder.', 'error');
+                    await signOut(auth);
+                    return;
+                }
+                
+            } catch (error) {
+                console.error("Login error:", error);
+                let errorMessage = "Error al iniciar sesión";
+                
+                if (error.code === 'auth/invalid-credential') {
+                    errorMessage = "Correo o contraseña incorrectos";
+                } else if (error.code === 'auth/user-not-found') {
+                    errorMessage = "Usuario no encontrado";
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage = "Contraseña incorrecta";
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = "Demasiados intentos fallidos. Intenta más tarde";
+                }
+                
+                showMessage(loginMessage, errorMessage, 'error');
+            }
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                showMessage(searchMessage, 'Sesión cerrada correctamente', 'success');
+            } catch (error) {
+                console.error("Logout error:", error);
+                showMessage(searchMessage, 'Error al cerrar sesión', 'error');
+            }
+        });
+
+        // ======================
+        // USER MANAGEMENT
+        // ======================
+
+        // Search user by email
+        searchUserBtn.addEventListener('click', searchUser);
+        userEmailInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchUser();
+        });
+
+        async function searchUser() {
+            const email = userEmailInput.value.trim();
+            
+            if (!email) {
+                showMessage(searchMessage, 'Ingresa un correo electrónico', 'error');
+                return;
+            }
+            
+            try {
+                showMessage(searchMessage, 'Buscando usuario...', 'warning');
+                userResult.classList.remove('show');
+                
+                // Search in users collection
+                const usersRef = collection(db, "users");
+                const q = query(usersRef, where("email", "==", email));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    // Try searching in stores collection
+                    const storesRef = collection(db, "stores");
+                    const storeQ = query(storesRef, where("ownerEmail", "==", email));
+                    const storeSnapshot = await getDocs(storeQ);
+                    
+                    if (storeSnapshot.empty) {
+                        showMessage(searchMessage, 'Usuario no encontrado', 'error');
+                        return;
+                    }
+                    
+                    // Found in stores, now get user data
+                    const storeDoc = storeSnapshot.docs[0];
+                    const storeData = storeDoc.data();
+                    
+                    // Try to get user document
+                    const userDocRef = doc(db, "users", storeDoc.id);
+                    const userDocSnap = await getDoc(userDocRef);
+                    
+                    if (userDocSnap.exists()) {
+                        currentUserDoc = {
+                            id: storeDoc.id,
+                            ref: userDocRef,
+                            ...userDocSnap.data()
+                        };
+                    } else {
+                        // Create user data from store
+                        currentUserDoc = {
+                            id: storeDoc.id,
+                            ref: userDocRef,
+                            email: storeData.ownerEmail,
+                            storeName: storeData.storeName,
+                            enabled: false // Default
+                        };
+                    }
+                } else {
+                    // Found in users collection
+                    const userDoc = querySnapshot.docs[0];
+                    currentUserDoc = {
+                        id: userDoc.id,
+                        ref: doc(db, "users", userDoc.id),
+                        ...userDoc.data()
+                    };
+                }
+                
+                // Display user info
+                document.getElementById('foundUserName').textContent = 
+                    currentUserDoc.storeName || currentUserDoc.name || "Sin nombre";
+                document.getElementById('foundUserEmail').textContent = 
+                    currentUserDoc.email || email;
+                document.getElementById('foundUserId').textContent = currentUserDoc.id;
+                
+                // Update status
+                const statusElement = document.getElementById('userStatus');
+                if (currentUserDoc.enabled) {
+                    statusElement.textContent = "Activo";
+                    statusElement.className = "user-status status-active";
+                    activateBtn.disabled = true;
+                    deactivateBtn.disabled = false;
+                } else {
+                    statusElement.textContent = "Inactivo";
+                    statusElement.className = "user-status status-inactive";
+                    activateBtn.disabled = false;
+                    deactivateBtn.disabled = true;
+                }
+                
+                userResult.classList.add('show');
+                showMessage(searchMessage, 'Usuario encontrado', 'success');
+                
+            } catch (error) {
+                console.error("Search error:", error);
+                showMessage(searchMessage, 'Error buscando usuario: ' + error.message, 'error');
+            }
+        }
+
+        // Activate user
+        activateBtn.addEventListener('click', async () => {
+            if (!currentUserDoc) return;
+            
+            if (!confirm(`¿Activar la cuenta de ${currentUserDoc.email}?`)) return;
+            
+            try {
+                await updateDoc(currentUserDoc.ref, {
+                    enabled: true,
+                    enabledAt: new Date(),
+                    enabledBy: "jmcristiano7.18@gmail.com",
+                    updatedAt: new Date()
+                });
+                
+                showMessage(searchMessage, 'Cuenta activada correctamente', 'success');
+                
+                // Update UI
+                const statusElement = document.getElementById('userStatus');
+                statusElement.textContent = "Activo";
+                statusElement.className = "user-status status-active";
+                activateBtn.disabled = true;
+                deactivateBtn.disabled = false;
+                
+                // Reload users list
+                loadUsersList();
+                
+            } catch (error) {
+                console.error("Activation error:", error);
+                showMessage(searchMessage, 'Error activando cuenta: ' + error.message, 'error');
+            }
+        });
+
+        // Deactivate user
+        deactivateBtn.addEventListener('click', async () => {
+            if (!currentUserDoc) return;
+            
+            if (!confirm(`¿Desactivar la cuenta de ${currentUserDoc.email}?`)) return;
+            
+            try {
+                await updateDoc(currentUserDoc.ref, {
+                    enabled: false,
+                    disabledAt: new Date(),
+                    disabledBy: "jmcristiano7.18@gmail.com",
+                    updatedAt: new Date()
+                });
+                
+                showMessage(searchMessage, 'Cuenta desactivada correctamente', 'success');
+                
+                // Update UI
+                const statusElement = document.getElementById('userStatus');
+                statusElement.textContent = "Inactivo";
+                statusElement.className = "user-status status-inactive";
+                activateBtn.disabled = false;
+                deactivateBtn.disabled = true;
+                
+                // Reload users list
+                loadUsersList();
+                
+            } catch (error) {
+                console.error("Deactivation error:", error);
+                showMessage(searchMessage, 'Error desactivando cuenta: ' + error.message, 'error');
+            }
+        });
+
+        // ======================
+        // USERS LIST
+        // ======================
+
+        async function loadUsersList() {
+            try {
+                const usersRef = collection(db, "users");
+                const q = query(usersRef, orderBy("createdAt", "desc"), limit(50));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    usersList.innerHTML = '<p class="message warning">No hay usuarios registrados</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>Correo</th>
+                                <th>Nombre Tienda</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                querySnapshot.forEach((docSnapshot) => {
+                    const user = docSnapshot.data();
+                    const userId = docSnapshot.id;
+                    
+                    html += `
+                        <tr>
+                            <td>${user.email || 'No especificado'}</td>
+                            <td>${user.storeName || 'Sin nombre'}</td>
+                            <td>
+                                <span class="user-status ${user.enabled ? 'status-active' : 'status-inactive'}">
+                                    ${user.enabled ? 'Activo' : 'Inactivo'}
+                                </span>
+                            </td>
+                            <td>
+                                <button onclick="quickToggle('${userId}', ${!user.enabled})" 
+                                        class="status-toggle ${user.enabled ? 'btn-danger' : 'btn-success'}">
+                                    ${user.enabled ? 'Desactivar' : 'Activar'}
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                        </tbody>
+                    </table>
+                `;
+                
+                usersList.innerHTML = html;
+                
+            } catch (error) {
+                console.error("Error loading users:", error);
+                usersList.innerHTML = `
+                    <p class="message error">
+                        Error cargando usuarios: ${error.message}
+                    </p>
+                `;
+            }
+        }
+
+        // Quick toggle function (available globally)
+        window.quickToggle = async (userId, newState) => {
+            const action = newState ? 'activar' : 'desactivar';
+            
+            if (!confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} esta cuenta?`)) return;
+            
+            try {
+                const userRef = doc(db, "users", userId);
+                await updateDoc(userRef, {
+                    enabled: newState,
+                    updatedAt: new Date(),
+                    [newState ? 'enabledBy' : 'disabledBy']: "jmcristiano7.18@gmail.com",
+                    [newState ? 'enabledAt' : 'disabledAt']: new Date()
+                });
+                
+                showMessage(searchMessage, `Cuenta ${action}da correctamente`, 'success');
+                loadUsersList();
+                
+                // Update current user if it's the same
+                if (currentUserDoc && currentUserDoc.id === userId) {
+                    currentUserDoc.enabled = newState;
+                    const statusElement = document.getElementById('userStatus');
+                    statusElement.textContent = newState ? "Activo" : "Inactivo";
+                    statusElement.className = `user-status ${newState ? 'status-active' : 'status-inactive'}`;
+                    activateBtn.disabled = newState;
+                    deactivateBtn.disabled = !newState;
+                }
+                
+            } catch (error) {
+                console.error("Toggle error:", error);
+                showMessage(searchMessage, `Error al ${action} cuenta: ${error.message}`, 'error');
+            }
+        };
+
+        // ======================
+        // HELPER FUNCTIONS
+        // ======================
+
+        function showMessage(element, text, type) {
+            element.textContent = text;
+            element.className = `message ${type}`;
+            element.style.display = 'block';
+            
+            // Auto-hide success messages after 3 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Auto-login for testing (remove in production)
+        // Uncomment the line below if you want to auto-fill the password
+        // document.getElementById('adminPassword').value = "Cronaldo7..";
+        
+        console.log("Panel de administración cargado. Usa jmcristiano7.18@gmail.com para acceder.");
+    </script>
+</body>
+</html>
