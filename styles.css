@@ -1,4 +1,4 @@
-/* styles.css */
+/* styles.css - Catálogo Digital con Firebase */
 :root {
     --primary-color: #25D366;
     --primary-dark: #128C7E;
@@ -121,6 +121,11 @@ body {
     font-size: 0.85rem;
 }
 
+.btn-block {
+    width: 100%;
+    justify-content: center;
+}
+
 #cart-count {
     background-color: var(--secondary-color);
     color: white;
@@ -165,9 +170,22 @@ body {
 
 .admin-actions {
     display: flex;
-    gap: 15px;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 30px;
     flex-wrap: wrap;
+    gap: 15px;
+}
+
+.store-info {
+    background-color: var(--light-gray);
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+}
+
+.store-info p {
+    margin: 0;
 }
 
 /* Productos */
@@ -277,6 +295,15 @@ body {
 .product-actions {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cart-quantity {
+    background-color: var(--light-gray);
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
 /* Carrito */
@@ -387,7 +414,7 @@ body {
     background-color: white;
     border-radius: var(--border-radius);
     width: 100%;
-    max-width: 700px;
+    max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -430,6 +457,34 @@ body {
     gap: 15px;
 }
 
+/* Tabs de autenticación */
+.tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--light-gray);
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--gray-color);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: var(--transition);
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tab-btn:hover:not(.active) {
+    color: var(--dark-color);
+}
+
 /* Formularios */
 .form-group {
     margin-bottom: 20px;
@@ -468,6 +523,7 @@ body {
     border-radius: var(--border-radius);
     background-color: white;
     cursor: pointer;
+    font-size: 0.9rem;
 }
 
 .image-file::file-selector-button {
@@ -478,6 +534,7 @@ body {
     color: white;
     cursor: pointer;
     transition: var(--transition);
+    font-size: 0.9rem;
 }
 
 .image-file::file-selector-button:hover {
@@ -507,6 +564,9 @@ body {
     border-radius: var(--border-radius);
     cursor: pointer;
     transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-remove-image:hover {
@@ -533,19 +593,45 @@ body {
     flex-wrap: wrap;
 }
 
-/* Estilos para vista previa mejorada */
 .preview-image {
     width: 80px;
     height: 80px;
     object-fit: cover;
     border-radius: var(--border-radius);
     border: 2px solid var(--light-gray);
-    margin: 5px;
 }
 
 .preview-image.loading {
     opacity: 0.7;
     background-color: var(--light-gray);
+}
+
+/* Mensajes de error */
+.error-message {
+    background-color: #fee;
+    color: var(--danger-color);
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    border: 1px solid #fcc;
+    margin-top: 15px;
+    font-size: 0.9rem;
+}
+
+/* Enlace de tienda */
+.store-link-container {
+    display: flex;
+    gap: 10px;
+}
+
+.store-link-input {
+    flex: 1;
+    padding: 10px 15px;
+    background-color: var(--light-gray);
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: var(--dark-color);
 }
 
 /* Estados vacíos */
@@ -595,10 +681,44 @@ body {
     margin-top: 10px;
 }
 
-#store-link {
-    color: var(--primary-color);
-    font-weight: 600;
-    word-break: break-all;
+/* Notificaciones */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px 20px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+    max-width: 350px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notification.success {
+    background-color: var(--success-color);
+}
+
+.notification.error {
+    background-color: var(--danger-color);
+}
+
+.notification.warning {
+    background-color: var(--warning-color);
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
 }
 
 /* Responsive */
@@ -610,6 +730,12 @@ body {
     
     .logo {
         text-align: center;
+    }
+    
+    .nav {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
     }
     
     .products-list, .catalog-grid {
@@ -632,11 +758,11 @@ body {
     
     .admin-actions {
         flex-direction: column;
+        align-items: stretch;
     }
     
-    .btn {
-        width: 100%;
-        justify-content: center;
+    .store-info {
+        text-align: center;
     }
 }
 
@@ -647,5 +773,14 @@ body {
     
     .modal-body, .modal-header, .modal-footer {
         padding: 15px;
+    }
+    
+    .tabs {
+        justify-content: center;
+    }
+    
+    .tab-btn {
+        padding: 10px 15px;
+        font-size: 0.9rem;
     }
 }

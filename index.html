@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+    
+    <!-- Firebase SDKs (Modular v10) -->
+    <script type="module" src="firebase-config.js"></script>
 </head>
 <body>
     <!-- Header con navegación -->
@@ -14,43 +17,121 @@
         <div class="container">
             <div class="logo">
                 <h1><i class="fas fa-store"></i> Catálogo Digital</h1>
-                <p id="store-name">Nombre de la Tienda</p>
+                <p id="store-name">Cargando tienda...</p>
             </div>
             
             <nav class="nav">
-                <button id="mode-toggle" class="btn btn-secondary">
-                    <i class="fas fa-user-shield"></i> Admin
+                <!-- Botones dinámicos según estado de autenticación -->
+                <button id="auth-btn" class="btn btn-secondary">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
                 </button>
+                <button id="my-store-btn" class="btn btn-secondary hidden">
+                    <i class="fas fa-store"></i> Mi Tienda
+                </button>
+                
                 <button id="view-cart" class="btn btn-primary">
                     <i class="fas fa-shopping-cart"></i> Carrito <span id="cart-count">0</span>
                 </button>
-                <button id="config-btn" class="btn btn-secondary" title="Configuración">
+                
+                <button id="config-btn" class="btn btn-secondary hidden" title="Configuración">
                     <i class="fas fa-cog"></i>
                 </button>
             </nav>
         </div>
     </header>
 
+    <!-- Modal de Autenticación (Login/Registro) -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="auth-modal-title">Iniciar Sesión</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="login">Iniciar Sesión</button>
+                    <button class="tab-btn" data-tab="register">Crear Cuenta</button>
+                </div>
+                
+                <!-- Formulario de Login -->
+                <form id="login-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="login-email">Correo electrónico:</label>
+                        <input type="email" id="login-email" placeholder="tucorreo@ejemplo.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="login-password">Contraseña:</label>
+                        <input type="password" id="login-password" placeholder="••••••••" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Formulario de Registro -->
+                <form id="register-form" class="auth-form hidden">
+                    <div class="form-group">
+                        <label for="register-store-name">Nombre de tu tienda:</label>
+                        <input type="text" id="register-store-name" placeholder="Ej: Mi Tienda Online" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="register-email">Correo electrónico:</label>
+                        <input type="email" id="register-email" placeholder="tucorreo@ejemplo.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="register-password">Contraseña:</label>
+                        <input type="password" id="register-password" placeholder="Mínimo 6 caracteres" minlength="6" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="register-whatsapp">Número de WhatsApp (con código de país):</label>
+                        <input type="text" id="register-whatsapp" placeholder="Ej: 51912345678" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-user-plus"></i> Crear Cuenta
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Mensajes de error -->
+                <div id="auth-error" class="error-message hidden"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Configuración de WhatsApp -->
     <div id="config-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Configuración</h2>
+                <h2>Configuración de Tienda</h2>
                 <button class="close-modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label for="whatsapp-number">Número de WhatsApp (con código de país):</label>
-                    <input type="text" id="whatsapp-number" placeholder="Ej: 51912345678" value="51912345678">
+                    <input type="text" id="whatsapp-number" placeholder="Ej: 51912345678">
                 </div>
                 <div class="form-group">
                     <label for="store-display-name">Nombre de la tienda:</label>
-                    <input type="text" id="store-display-name" placeholder="Ej: Mi Tienda Online" value="Mi Tienda Online">
+                    <input type="text" id="store-display-name" placeholder="Ej: Mi Tienda Online">
                 </div>
                 <div class="form-group">
-                    <label for="store-id">ID de tienda (para enlace único):</label>
-                    <input type="text" id="store-id" placeholder="Ej: mitienda" value="default">
-                    <p class="help-text">Tu enlace único: <span id="store-link">...</span></p>
+                    <label>Enlace de tu tienda:</label>
+                    <div class="store-link-container">
+                        <input type="text" id="store-link-input" readonly class="store-link-input">
+                        <button id="copy-link" class="btn btn-secondary btn-small">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </div>
+                    <p class="help-text">Comparte este enlace con tus clientes</p>
                 </div>
                 <div class="modal-footer">
                     <button id="save-config" class="btn btn-primary">Guardar Configuración</button>
@@ -164,9 +245,9 @@
                 <button id="add-product" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Agregar Producto
                 </button>
-                <button id="clear-all-products" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Eliminar Todos los Productos
-                </button>
+                <div class="store-info">
+                    <p><strong>Tu ID de tienda:</strong> <span id="store-id-display">cargando...</span></p>
+                </div>
             </div>
             
             <div id="products-list" class="products-list">
@@ -183,7 +264,7 @@
         <section id="catalog-panel">
             <div class="section-header">
                 <h2><i class="fas fa-store"></i> Nuestro Catálogo</h2>
-                <p>Explora nuestros productos y agrega al carrito</p>
+                <p id="catalog-description">Explora nuestros productos y agrega al carrito</p>
             </div>
             
             <div id="catalog-products" class="catalog-grid">
@@ -191,7 +272,7 @@
                 <div class="empty-state">
                     <i class="fas fa-box-open"></i>
                     <h3>Catálogo vacío</h3>
-                    <p>El administrador aún no ha agregado productos</p>
+                    <p>No hay productos disponibles en este momento</p>
                 </div>
             </div>
         </section>
@@ -200,18 +281,14 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>Catálogo Digital &copy; <span id="current-year"></span> | 
-                <a href="#" id="share-link">
-                    <i class="fas fa-share-alt"></i> Comparte tu enlace único
-                </a>
-            </p>
+            <p>Catálogo Digital &copy; <span id="current-year"></span></p>
             <p class="footer-note">
-                Esta aplicación funciona completamente en tu navegador. Los datos se guardan localmente.
+                Esta aplicación funciona con Firebase. Los datos se guardan en la nube.
             </p>
         </div>
     </footer>
 
     <!-- Scripts -->
-    <script src="script.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
