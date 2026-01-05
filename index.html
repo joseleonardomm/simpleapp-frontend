@@ -16,8 +16,17 @@
     <header class="header">
         <div class="container">
             <div class="logo">
-                <h1><i class="fas fa-store"></i> Catálogo Digital</h1>
-                <p id="store-name">Cargando tienda...</p>
+                <!-- Contenedor para logo de marca -->
+                <div class="brand-logo-container">
+                    <img id="brand-logo" src="" alt="Logo de la marca" class="brand-logo hidden">
+                    <div id="default-logo" class="default-logo">
+                        <i class="fas fa-store"></i>
+                    </div>
+                </div>
+                <div class="store-info">
+                    <h1 id="store-name">Cargando tienda...</h1>
+                    <p id="store-tagline" class="store-tagline">Catálogo Digital</p>
+                </div>
             </div>
             
             <nav class="nav">
@@ -107,7 +116,7 @@
         </div>
     </div>
 
-    <!-- Configuración de WhatsApp -->
+    <!-- Configuración de Tienda -->
     <div id="config-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -123,6 +132,54 @@
                     <label for="store-display-name">Nombre de la tienda:</label>
                     <input type="text" id="store-display-name" placeholder="Ej: Mi Tienda Online">
                 </div>
+                
+                <!-- Logo de la marca -->
+                <div class="form-group">
+                    <label for="brand-logo-upload">Logo de la marca (JPG/PNG):</label>
+                    <div class="logo-upload-container">
+                        <input type="file" id="brand-logo-upload" accept="image/jpeg, image/png" class="logo-file">
+                        <div id="logo-preview" class="logo-preview">
+                            <p>Vista previa del logo:</p>
+                            <div class="preview-logo-container">
+                                <img id="logo-preview-image" src="" alt="Vista previa del logo" class="logo-preview-image hidden">
+                            </div>
+                        </div>
+                    </div>
+                    <p class="help-text">Tamaño recomendado: 200x200px. Máximo 2MB.</p>
+                </div>
+                
+                <!-- Selector de combinación de colores -->
+                <div class="form-group">
+                    <label for="color-scheme">Combinación de colores:</label>
+                    <div class="color-schemes-grid">
+                        <div class="color-scheme-option" data-scheme="whatsapp">
+                            <div class="color-preview whatsapp-scheme"></div>
+                            <span>WhatsApp</span>
+                        </div>
+                        <div class="color-scheme-option" data-scheme="blue">
+                            <div class="color-preview blue-scheme"></div>
+                            <span>Azul Profesional</span>
+                        </div>
+                        <div class="color-scheme-option" data-scheme="green">
+                            <div class="color-preview green-scheme"></div>
+                            <span>Verde Naturaleza</span>
+                        </div>
+                        <div class="color-scheme-option" data-scheme="purple">
+                            <div class="color-preview purple-scheme"></div>
+                            <span>Púrpura Creativo</span>
+                        </div>
+                        <div class="color-scheme-option" data-scheme="red">
+                            <div class="color-preview red-scheme"></div>
+                            <span>Rojo Pasión</span>
+                        </div>
+                        <div class="color-scheme-option" data-scheme="orange">
+                            <div class="color-preview orange-scheme"></div>
+                            <span>Naranja Energía</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="selected-color-scheme" value="whatsapp">
+                </div>
+                
                 <div class="form-group">
                     <label>Enlace de tu tienda:</label>
                     <div class="store-link-container">
@@ -245,7 +302,7 @@
                 <button id="add-product" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Agregar Producto
                 </button>
-                <div class="store-info">
+                <div class="store-info-panel">
                     <p><strong>Tu ID de tienda:</strong> <span id="store-id-display">cargando...</span></p>
                 </div>
             </div>

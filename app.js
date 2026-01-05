@@ -41,9 +41,14 @@ const elements = {
     cartCount: document.getElementById('cart-count'),
     cartTotal: document.getElementById('cart-total'),
     storeName: document.getElementById('store-name'),
+    storeTagline: document.getElementById('store-tagline'),
     storeIdDisplay: document.getElementById('store-id-display'),
     catalogDescription: document.getElementById('catalog-description'),
     currentYear: document.getElementById('current-year'),
+    
+    // Logo de marca
+    brandLogo: document.getElementById('brand-logo'),
+    defaultLogo: document.getElementById('default-logo'),
     
     // Formularios
     loginForm: document.getElementById('login-form'),
@@ -64,6 +69,13 @@ const elements = {
     productName: document.getElementById('product-name'),
     productPrice: document.getElementById('product-price'),
     productDescription: document.getElementById('product-description'),
+    
+    // Nuevos elementos para logo y colores
+    brandLogoUpload: document.getElementById('brand-logo-upload'),
+    logoPreviewImage: document.getElementById('logo-preview-image'),
+    logoPreview: document.getElementById('logo-preview'),
+    selectedColorScheme: document.getElementById('selected-color-scheme'),
+    colorSchemeOptions: document.querySelectorAll('.color-scheme-option'),
     
     // Tabs y otros
     tabBtns: document.querySelectorAll('.tab-btn'),
@@ -213,7 +225,7 @@ async function loadUserStore(storeId) {
         if (storeSnap.exists()) {
             console.log("Tienda encontrada:", storeSnap.data());
             appState.currentStore = storeSnap.data();
-            elements.storeName.textContent = appState.currentStore.storeName;
+            await updateStoreBranding(appState.currentStore);
             elements.storeIdDisplay.textContent = storeId;
             await loadStoreProducts(storeId);
             
@@ -238,6 +250,63 @@ async function loadUserStore(storeId) {
     } catch (error) {
         console.error("Error cargando tienda:", error);
         showNotification("Error cargando tienda", "error");
+    }
+}
+
+// Actualizar branding de la tienda (logo, nombre, colores)
+async function updateStoreBranding(storeData) {
+    // Actualizar nombre de la tienda
+    elements.storeName.textContent = storeData.storeName || "Mi Tienda";
+    elements.storeIdDisplay.textContent = appState.storeId;
+    
+    // Actualizar logo
+    if (storeData.logoUrl) {
+        elements.brandLogo.src = storeData.logoUrl;
+        elements.brandLogo.classList.remove('hidden');
+        elements.defaultLogo.classList.add('hidden');
+    } else {
+        elements.brandLogo.classList.add('hidden');
+        elements.defaultLogo.classList.remove('hidden');
+    }
+    
+    // Actualizar esquema de colores
+    if (storeData.colorScheme) {
+        applyColorScheme(storeData.colorScheme);
+    } else {
+        // Esquema por defecto (WhatsApp)
+        applyColorScheme('whatsapp');
+    }
+}
+
+// Aplicar esquema de colores
+function applyColorScheme(scheme) {
+    // Remover todas las clases de esquema de colores
+    document.body.classList.remove(
+        'color-scheme-whatsapp',
+        'color-scheme-blue',
+        'color-scheme-green',
+        'color-scheme-purple',
+        'color-scheme-red',
+        'color-scheme-orange'
+    );
+    
+    // Aplicar nueva clase de esquema
+    document.body.classList.add(`color-scheme-${scheme}`);
+    
+    // Actualizar el botón activo en el modal si está abierto
+    if (elements.colorSchemeOptions) {
+        elements.colorSchemeOptions.forEach(option => {
+            if (option.dataset.scheme === scheme) {
+                option.classList.add('selected');
+            } else {
+                option.classList.remove('selected');
+            }
+        });
+    }
+    
+    // Actualizar el input hidden
+    if (elements.selectedColorScheme) {
+        elements.selectedColorScheme.value = scheme;
     }
 }
 
@@ -277,7 +346,7 @@ async function loadStoreForCustomer(storeId) {
         
         if (storeSnap.exists()) {
             appState.currentStore = storeSnap.data();
-            elements.storeName.textContent = appState.currentStore.storeName;
+            await updateStoreBranding(appState.currentStore);
             elements.catalogDescription.textContent = `Explora los productos de ${appState.currentStore.storeName}`;
             
             // Ocultar botones de administración (modo cliente)
@@ -309,14 +378,15 @@ async function createStoreForUser(storeId) {
             ownerId: storeId,
             ownerEmail: appState.currentUser.email,
             whatsappNumber: "",
+            logoUrl: "",
+            colorScheme: "whatsapp",
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         };
         
         await setDoc(doc(db, "stores", storeId), storeData);
         appState.currentStore = storeData;
-        elements.storeName.textContent = "Mi Tienda";
-        elements.storeIdDisplay.textContent = storeId;
+        await updateStoreBranding(storeData);
         
         // Solo mostrar panel de administración si el usuario está habilitado
         if (appState.userEnabled) {
@@ -401,6 +471,26 @@ function setupEventListeners() {
         });
     }
     
+    // Selector de combinación de colores
+    if (elements.colorSchemeOptions) {
+        elements.colorSchemeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const scheme = option.dataset.scheme;
+                elements.colorSchemeOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                elements.selectedColorScheme.value = scheme;
+                
+                // Aplicar el esquema inmediatamente para vista previa
+                applyColorScheme(scheme);
+            });
+        });
+    }
+    
+    // Logo upload
+    if (elements.brandLogoUpload) {
+        elements.brandLogoUpload.addEventListener('change', previewBrandLogo);
+    }
+    
     // Cerrar modales
     document.querySelectorAll('.close-modal').forEach(btn => {
         btn.addEventListener('click', closeAllModals);
@@ -477,6 +567,25 @@ function setupEventListeners() {
             previewImage(e.target);
         }
     });
+}
+
+// Previsualizar logo de marca
+function previewBrandLogo() {
+    const file = elements.brandLogoUpload.files[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+        showNotification("El logo es demasiado grande (máximo 2MB)", "error");
+        elements.brandLogoUpload.value = '';
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        elements.logoPreviewImage.src = e.target.result;
+        elements.logoPreviewImage.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
 }
 
 // Manejar login
@@ -572,6 +681,8 @@ async function handleRegister(e) {
             ownerId: user.uid,
             ownerEmail: email,
             whatsappNumber: whatsapp,
+            logoUrl: "",
+            colorScheme: "whatsapp",
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         };
@@ -694,7 +805,7 @@ async function handleProductSubmit(e) {
             // Crear nuevo producto
             productData.createdAt = window.firebaseServices.serverTimestamp();
             
-            await window.firebaseServices.addDoc(
+            const docRef = await window.firebaseServices.addDoc(
                 window.firebaseServices.collection(
                     window.firebaseServices.db,
                     "stores",
@@ -703,6 +814,12 @@ async function handleProductSubmit(e) {
                 ),
                 productData
             );
+            
+            // Si hay imágenes temporales, podríamos moverlas a la carpeta del producto
+            // Esto es opcional pero mejora la organización
+            const newProductId = docRef.id;
+            console.log("Nuevo producto creado con ID:", newProductId);
+            
             showNotification("Producto agregado", "success");
         }
         
@@ -752,9 +869,10 @@ async function saveStoreConfig() {
     
     const whatsapp = elements.whatsappNumber.value.trim();
     const storeName = elements.storeDisplayName.value.trim();
+    const colorScheme = elements.selectedColorScheme.value;
     
     if (!whatsapp || !storeName) {
-        showNotification("Completa todos los campos", "error");
+        showNotification("Completa todos los campos obligatorios", "error");
         return;
     }
     
@@ -764,22 +882,46 @@ async function saveStoreConfig() {
     }
     
     try {
+        let logoUrl = appState.currentStore.logoUrl;
+        
+        // Si hay un nuevo logo, subirlo
+        if (elements.brandLogoUpload.files[0]) {
+            const logoFile = elements.brandLogoUpload.files[0];
+            
+            if (logoFile.size > 2 * 1024 * 1024) {
+                showNotification("El logo es demasiado grande (máximo 2MB)", "error");
+                return;
+            }
+            
+            // Subir logo a Firebase Storage usando la función específica
+            logoUrl = await window.uploadLogo(logoFile, appState.storeId);
+        }
+        
+        const storeData = {
+            whatsappNumber: whatsapp,
+            storeName: storeName,
+            logoUrl: logoUrl,
+            colorScheme: colorScheme,
+            updatedAt: window.firebaseServices.serverTimestamp()
+        };
+        
         await window.firebaseServices.updateDoc(
             window.firebaseServices.doc(
                 window.firebaseServices.db,
                 "stores",
                 appState.storeId
             ),
-            {
-                whatsappNumber: whatsapp,
-                storeName: storeName,
-                updatedAt: window.firebaseServices.serverTimestamp()
-            }
+            storeData
         );
         
+        // Actualizar el estado actual
         appState.currentStore.whatsappNumber = whatsapp;
         appState.currentStore.storeName = storeName;
-        elements.storeName.textContent = storeName;
+        appState.currentStore.logoUrl = logoUrl;
+        appState.currentStore.colorScheme = colorScheme;
+        
+        // Aplicar cambios en la UI
+        await updateStoreBranding(appState.currentStore);
         
         closeAllModals();
         showNotification("Configuración guardada", "success");
@@ -810,6 +952,22 @@ function loadStoreConfig() {
         elements.whatsappNumber.value = appState.currentStore.whatsappNumber || "";
         elements.storeDisplayName.value = appState.currentStore.storeName || "";
         elements.storeLinkInput.value = `${window.location.origin}/?store=${appState.storeId}`;
+        
+        // Cargar logo
+        if (appState.currentStore.logoUrl) {
+            elements.logoPreviewImage.src = appState.currentStore.logoUrl;
+            elements.logoPreviewImage.classList.remove('hidden');
+        } else {
+            elements.logoPreviewImage.classList.add('hidden');
+        }
+        
+        // Resetear input de archivo
+        elements.brandLogoUpload.value = '';
+        
+        // Cargar esquema de colores
+        const colorScheme = appState.currentStore.colorScheme || 'whatsapp';
+        elements.selectedColorScheme.value = colorScheme;
+        applyColorScheme(colorScheme);
     }
 }
 
@@ -844,7 +1002,15 @@ async function handleLogout() {
         elements.myStoreBtn.classList.add('hidden');
         elements.addProduct.classList.add('hidden');
         elements.storeName.textContent = "Cargando tienda...";
+        elements.storeTagline.textContent = "Catálogo Digital";
         elements.catalogDescription.textContent = "Inicia sesión para administrar tu tienda";
+        
+        // Restablecer logo
+        elements.brandLogo.classList.add('hidden');
+        elements.defaultLogo.classList.remove('hidden');
+        
+        // Restablecer esquema de colores por defecto
+        applyColorScheme('whatsapp');
         
         // Limpiar carrito
         appState.cart = [];

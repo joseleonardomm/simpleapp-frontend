@@ -16,6 +16,49 @@
     --transition: all 0.3s ease;
 }
 
+/* Combinaciones de colores predefinidas */
+.color-scheme-whatsapp {
+    --primary-color: #25D366;
+    --primary-dark: #128C7E;
+    --secondary-color: #075E54;
+    --accent-color: #34B7F1;
+}
+
+.color-scheme-blue {
+    --primary-color: #3498db;
+    --primary-dark: #2980b9;
+    --secondary-color: #2c3e50;
+    --accent-color: #1abc9c;
+}
+
+.color-scheme-green {
+    --primary-color: #27ae60;
+    --primary-dark: #229954;
+    --secondary-color: #145a32;
+    --accent-color: #82e0aa;
+}
+
+.color-scheme-purple {
+    --primary-color: #9b59b6;
+    --primary-dark: #8e44ad;
+    --secondary-color: #512e5f;
+    --accent-color: #bb8fce;
+}
+
+.color-scheme-red {
+    --primary-color: #e74c3c;
+    --primary-dark: #c0392b;
+    --secondary-color: #7b241c;
+    --accent-color: #f1948a;
+}
+
+.color-scheme-orange {
+    --primary-color: #e67e22;
+    --primary-dark: #d35400;
+    --secondary-color: #784212;
+    --accent-color: #f5b041;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -30,6 +73,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -55,18 +99,57 @@ body {
     padding: 15px 20px;
 }
 
-.logo h1 {
-    font-size: 1.5rem;
-    color: var(--secondary-color);
+/* Logo de la marca */
+.logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
 }
 
-#store-name {
+.brand-logo-container {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brand-logo {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.default-logo {
+    width: 50px;
+    height: 50px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.store-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.store-info h1 {
+    font-size: 1.5rem;
+    color: var(--secondary-color);
+    margin: 0;
+}
+
+.store-tagline {
     color: var(--gray-color);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     margin-top: 2px;
+    font-weight: 400;
 }
 
 .nav {
@@ -87,6 +170,13 @@ body {
     align-items: center;
     gap: 8px;
     transition: var(--transition);
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
 }
 
 .btn-primary {
@@ -177,14 +267,14 @@ body {
     gap: 15px;
 }
 
-.store-info {
+.store-info-panel {
     background-color: var(--light-gray);
     padding: 10px 15px;
     border-radius: var(--border-radius);
     font-size: 0.9rem;
 }
 
-.store-info p {
+.store-info-panel p {
     margin: 0;
 }
 
@@ -202,11 +292,13 @@ body {
     overflow: hidden;
     box-shadow: var(--box-shadow);
     transition: var(--transition);
+    border: 1px solid var(--light-gray);
 }
 
 .product-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary-color);
 }
 
 .product-image-container {
@@ -516,6 +608,130 @@ body {
     box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.2);
 }
 
+/* Logo upload */
+.logo-upload-container {
+    margin-bottom: 15px;
+}
+
+.logo-file {
+    padding: 8px;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    background-color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.logo-file::file-selector-button {
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--primary-color);
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.9rem;
+}
+
+.logo-file::file-selector-button:hover {
+    background-color: var(--primary-dark);
+}
+
+.logo-preview {
+    text-align: center;
+}
+
+.logo-preview p {
+    margin-bottom: 10px;
+    color: var(--gray-color);
+    font-size: 0.9rem;
+}
+
+.preview-logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 15px;
+    min-height: 150px;
+}
+
+.logo-preview-image {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 8px;
+    border: 2px solid var(--light-gray);
+    object-fit: contain;
+}
+
+/* Combinaciones de colores */
+.color-schemes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.color-scheme-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    border: 2px solid transparent;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.color-scheme-option:hover {
+    background-color: var(--light-gray);
+}
+
+.color-scheme-option.selected {
+    border-color: var(--primary-color);
+    background-color: rgba(37, 211, 102, 0.1);
+}
+
+.color-preview {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-bottom: 5px;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.whatsapp-scheme {
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+}
+
+.blue-scheme {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+}
+
+.green-scheme {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+}
+
+.purple-scheme {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+}
+
+.red-scheme {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.orange-scheme {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+}
+
+.color-scheme-option span {
+    font-size: 0.8rem;
+    text-align: center;
+    color: var(--dark-color);
+    margin-top: 5px;
+}
+
 /* Estilos para inputs de archivo */
 .image-file {
     padding: 8px;
@@ -729,7 +945,13 @@ body {
     }
     
     .logo {
+        flex-direction: column;
         text-align: center;
+        gap: 10px;
+    }
+    
+    .brand-logo-container {
+        margin: 0 auto;
     }
     
     .nav {
@@ -761,8 +983,12 @@ body {
         align-items: stretch;
     }
     
-    .store-info {
+    .store-info-panel {
         text-align: center;
+    }
+    
+    .color-schemes-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -782,5 +1008,9 @@ body {
     .tab-btn {
         padding: 10px 15px;
         font-size: 0.9rem;
+    }
+    
+    .color-schemes-grid {
+        grid-template-columns: 1fr;
     }
 }
