@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo Digital | Tu Negocio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+</head>
+<body>
+    <!-- Header con navegación -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1><i class="fas fa-store"></i> Catálogo Digital</h1>
+                <p id="store-name">Nombre de la Tienda</p>
+            </div>
+            
+            <nav class="nav">
+                <button id="mode-toggle" class="btn btn-secondary">
+                    <i class="fas fa-user-shield"></i> Admin
+                </button>
+                <button id="view-cart" class="btn btn-primary">
+                    <i class="fas fa-shopping-cart"></i> Carrito <span id="cart-count">0</span>
+                </button>
+                <button id="config-btn" class="btn btn-secondary" title="Configuración">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Configuración de WhatsApp -->
+    <div id="config-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Configuración</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="whatsapp-number">Número de WhatsApp (con código de país):</label>
+                    <input type="text" id="whatsapp-number" placeholder="Ej: 51912345678" value="51912345678">
+                </div>
+                <div class="form-group">
+                    <label for="store-display-name">Nombre de la tienda:</label>
+                    <input type="text" id="store-display-name" placeholder="Ej: Mi Tienda Online" value="Mi Tienda Online">
+                </div>
+                <div class="form-group">
+                    <label for="store-id">ID de tienda (para enlace único):</label>
+                    <input type="text" id="store-id" placeholder="Ej: mitienda" value="default">
+                    <p class="help-text">Tu enlace único: <span id="store-link">...</span></p>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-config" class="btn btn-primary">Guardar Configuración</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para agregar/editar productos -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Agregar Producto</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="product-form">
+                    <div class="form-group">
+                        <label for="product-name">Nombre del producto *</label>
+                        <input type="text" id="product-name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-price">Precio (en tu moneda) *</label>
+                        <input type="number" id="product-price" min="0" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-description">Descripción</label>
+                        <textarea id="product-description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Imágenes del producto (mínimo 1, máximo 5)</label>
+                        <div class="image-inputs">
+                            <div class="image-input">
+                                <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg" required>
+                                <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="image-input">
+                                <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg">
+                                <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-image" class="btn btn-secondary btn-small">
+                            <i class="fas fa-plus"></i> Agregar otra imagen
+                        </button>
+                        <p class="help-text">Formatos aceptados: JPG, PNG. Tamaño máximo por imagen: 2MB.</p>
+                    </div>
+                    
+                    <div class="image-preview" id="image-preview">
+                        <p>Vista previa de imágenes:</p>
+                        <div class="preview-container"></div>
+                    </div>
+                    
+                    <input type="hidden" id="product-id">
+                    
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Guardar Producto</button>
+                        <button type="button" class="btn btn-secondary close-modal">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal del carrito -->
+    <div id="cart-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Tu Carrito de Compras</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="cart-empty" class="empty-state">
+                    <i class="fas fa-shopping-cart"></i>
+                    <h3>Tu carrito está vacío</h3>
+                    <p>Agrega productos desde el catálogo</p>
+                </div>
+                
+                <div id="cart-items-container">
+                    <!-- Los productos del carrito se agregarán aquí dinámicamente -->
+                </div>
+                
+                <div id="cart-summary" class="cart-summary">
+                    <div class="summary-row">
+                        <span>Total:</span>
+                        <span id="cart-total">$0.00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="clear-cart" class="btn btn-secondary">Vaciar Carrito</button>
+                <button id="checkout-whatsapp" class="btn btn-primary">
+                    <i class="fab fa-whatsapp"></i> Comprar por WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <main class="container main-container">
+        <!-- Panel de administración (oculto por defecto) -->
+        <section id="admin-panel" class="hidden">
+            <div class="section-header">
+                <h2><i class="fas fa-user-shield"></i> Panel de Administración</h2>
+                <p>Gestiona los productos de tu catálogo</p>
+            </div>
+            
+            <div class="admin-actions">
+                <button id="add-product" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Agregar Producto
+                </button>
+                <button id="clear-all-products" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Eliminar Todos los Productos
+                </button>
+            </div>
+            
+            <div id="products-list" class="products-list">
+                <!-- Los productos se mostrarán aquí -->
+                <div class="empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <h3>No hay productos aún</h3>
+                    <p>Agrega tu primer producto para comenzar</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Catálogo para clientes (visible por defecto) -->
+        <section id="catalog-panel">
+            <div class="section-header">
+                <h2><i class="fas fa-store"></i> Nuestro Catálogo</h2>
+                <p>Explora nuestros productos y agrega al carrito</p>
+            </div>
+            
+            <div id="catalog-products" class="catalog-grid">
+                <!-- Los productos del catálogo se mostrarán aquí -->
+                <div class="empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <h3>Catálogo vacío</h3>
+                    <p>El administrador aún no ha agregado productos</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>Catálogo Digital &copy; <span id="current-year"></span> | 
+                <a href="#" id="share-link">
+                    <i class="fas fa-share-alt"></i> Comparte tu enlace único
+                </a>
+            </p>
+            <p class="footer-note">
+                Esta aplicación funciona completamente en tu navegador. Los datos se guardan localmente.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>
