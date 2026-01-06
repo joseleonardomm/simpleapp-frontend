@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finanzas Personales | Control de Gastos e Ingresos</title>
+    <meta name="description" content="Aplicación web para controlar tus finanzas personales, ingresos y gastos">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="finanzas.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -64,6 +65,9 @@
                             <option value="income">Ingresos</option>
                             <option value="expense">Gastos</option>
                         </select>
+                        <button class="btn btn-primary" id="viewAllTransactionsBtn">
+                            <i class="fas fa-list"></i> Ver Todas
+                        </button>
                     </div>
                 </div>
                 
@@ -130,7 +134,7 @@
         </div>
 
         <footer>
-            <p>© 2025 Finanzas Personales | Aplicación de control de gastos e ingresos</p>
+            <p>© 2025 Software para finanzas | Aplicación de control de gastos e ingresos</p>
             <p>Esta aplicación usa almacenamiento local del navegador</p>
         </footer>
     </div>
@@ -225,6 +229,46 @@
                     <button type="submit" class="btn btn-primary">Guardar Distribución</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal para ver todas las transacciones -->
+    <div class="modal" id="allTransactionsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Todas las Transacciones</h3>
+                <button class="close-btn" id="closeAllTransactionsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-filters" style="margin-bottom: 20px;">
+                    <select id="allTransactionsFilterType">
+                        <option value="all">Todas</option>
+                        <option value="income">Ingresos</option>
+                        <option value="expense">Gastos</option>
+                    </select>
+                </div>
+                <div class="transactions-list" style="max-height: 400px; overflow-y: auto;">
+                    <table id="allTransactionsTable" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Descripción</th>
+                                <th>Tipo</th>
+                                <th>Fecha</th>
+                                <th>Monto</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allTransactionsBody">
+                            <!-- Todas las transacciones se cargarán aquí -->
+                        </tbody>
+                    </table>
+                    <div id="emptyAllTransactions" class="empty-state">
+                        <i class="fas fa-exchange-alt"></i>
+                        <h3>No hay transacciones registradas</h3>
+                        <p>Agrega tu primer ingreso o gasto para comenzar</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -89,10 +89,12 @@ function setupEventListeners() {
     // Botones para abrir modales
     document.getElementById('addTransactionBtn').addEventListener('click', () => openTransactionModal());
     document.getElementById('addPercentageBtn').addEventListener('click', () => openPercentageModal());
+    document.getElementById('viewAllTransactionsBtn').addEventListener('click', () => openAllTransactionsModal());
     
     // Cerrar modales
     document.getElementById('closeTransactionModal').addEventListener('click', () => closeTransactionModal());
     document.getElementById('closePercentageModal').addEventListener('click', () => closePercentageModal());
+    document.getElementById('closeAllTransactionsModal').addEventListener('click', () => closeAllTransactionsModal());
     document.getElementById('cancelTransaction').addEventListener('click', () => closeTransactionModal());
     document.getElementById('cancelPercentage').addEventListener('click', () => closePercentageModal());
     
@@ -102,6 +104,7 @@ function setupEventListeners() {
     
     // Filtro de transacciones
     document.getElementById('filterType').addEventListener('change', updateTransactionsTable);
+    document.getElementById('allTransactionsFilterType').addEventListener('change', updateAllTransactionsTable);
     
     // Selectores de mes y año
     document.getElementById('monthSelect').addEventListener('change', updateMonthSummary);
@@ -218,7 +221,7 @@ function updateSummaryCards() {
     document.getElementById('totalBalance').textContent = `$${(totalIncome - totalExpense).toFixed(2)}`;
 }
 
-// Actualizar la tabla de transacciones
+// Actualizar la tabla de transacciones (mostrar solo 5)
 function updateTransactionsTable() {
     const filterType = document.getElementById('filterType').value;
     const tbody = document.getElementById('transactionsBody');
@@ -243,8 +246,11 @@ function updateTransactionsTable() {
     
     emptyState.style.display = 'none';
     
+    // Tomar solo las últimas 5 transacciones
+    const transactionsToShow = filteredTransactions.slice(0, 5);
+    
     // Agregar transacciones a la tabla
-    filteredTransactions.forEach(transaction => {
+    transactionsToShow.forEach(transaction => {
         const row = document.createElement('tr');
         
         // Determinar texto para la columna de tipo/categoría
@@ -293,6 +299,89 @@ function updateTransactionsTable() {
     });
     
     document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = parseInt(e.currentTarget.getAttribute('data-id'));
+            deleteTransaction(id);
+        });
+    });
+}
+
+// Actualizar la tabla de todas las transacciones (modal)
+function updateAllTransactionsTable() {
+    const filterType = document.getElementById('allTransactionsFilterType').value;
+    const tbody = document.getElementById('allTransactionsBody');
+    const emptyState = document.getElementById('emptyAllTransactions');
+    
+    // Filtrar transacciones
+    let filteredTransactions = [...transactions];
+    if (filterType !== 'all') {
+        filteredTransactions = transactions.filter(t => t.type === filterType);
+    }
+    
+    // Ordenar por fecha (más reciente primero)
+    filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // Limpiar tabla
+    tbody.innerHTML = '';
+    
+    if (filteredTransactions.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    // Agregar todas las transacciones a la tabla
+    filteredTransactions.forEach(transaction => {
+        const row = document.createElement('tr');
+        
+        // Determinar texto para la columna de tipo/categoría
+        let categoryText = '';
+        if (transaction.type === 'income') {
+            categoryText = '<span style="color: var(--accent-color);">Ingreso (Distribuido)</span>';
+        } else {
+            const category = defaultCategories.find(c => c.id === transaction.categoryId);
+            categoryText = category ? category.name : 'Desconocida';
+        }
+        
+        // Formatear fecha
+        const date = new Date(transaction.date);
+        const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+        
+        // Determinar clase para el monto
+        const amountClass = transaction.type === 'income' ? 'transaction-income' : 'transaction-expense';
+        const amountPrefix = transaction.type === 'income' ? '+' : '-';
+        
+        row.innerHTML = `
+            <td>${transaction.description}</td>
+            <td>${categoryText}</td>
+            <td>${formattedDate}</td>
+            <td class="${amountClass}">${amountPrefix}$${transaction.amount.toFixed(2)}</td>
+            <td>
+                <div class="transaction-actions">
+                    <button class="action-btn edit-btn" data-id="${transaction.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete-btn" data-id="${transaction.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    // Agregar listeners a los botones de editar y eliminar en el modal
+    tbody.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = parseInt(e.currentTarget.getAttribute('data-id'));
+            editTransaction(id);
+            closeAllTransactionsModal();
+        });
+    });
+    
+    tbody.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const id = parseInt(e.currentTarget.getAttribute('data-id'));
             deleteTransaction(id);
@@ -599,6 +688,25 @@ function closeTransactionModal() {
     document.getElementById('transactionForm').reset();
     document.getElementById('categoryWarning').style.display = 'none';
     editingTransactionId = null;
+}
+
+// Abrir modal de todas las transacciones
+function openAllTransactionsModal() {
+    const modal = document.getElementById('allTransactionsModal');
+    
+    // Sincronizar el filtro con el de la vista principal
+    const mainFilter = document.getElementById('filterType').value;
+    document.getElementById('allTransactionsFilterType').value = mainFilter;
+    
+    // Actualizar la tabla del modal
+    updateAllTransactionsTable();
+    
+    modal.classList.add('active');
+}
+
+// Cerrar modal de todas las transacciones
+function closeAllTransactionsModal() {
+    document.getElementById('allTransactionsModal').classList.remove('active');
 }
 
 // Abrir modal de porcentajes
@@ -978,141 +1086,6 @@ function showNotification(message, type) {
     }, 3000);
 }
 
-// Generar datos de ejemplo para demostración
-function generateSampleData() {
-    if (transactions.length > 0) {
-        if (!confirm('¿Reemplazar los datos actuales con datos de ejemplo?')) {
-            return;
-        }
-    }
-    
-    // Limpiar transacciones existentes
-    transactions = [];
-    
-    // Reinicializar balances
-    initializeCategoryBalances();
-    
-    // Mes actual y anterior
-    const currentDate = new Date();
-    const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-    
-    // Ingresos de ejemplo (se distribuirán automáticamente)
-    const income1 = {
-        id: Date.now() + 1,
-        description: 'Salario',
-        categoryId: null, // Los ingresos no tienen categoría
-        amount: 2500,
-        date: formatDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), 5)),
-        type: 'income'
-    };
-    
-    const income2 = {
-        id: Date.now() + 2,
-        description: 'Freelance',
-        categoryId: null,
-        amount: 800,
-        date: formatDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), 15)),
-        type: 'income'
-    };
-    
-    // Agregar ingresos y distribuir automáticamente
-    transactions.push(income1);
-    percentages.forEach(percentage => {
-        const categoryAmount = income1.amount * (percentage.value / 100);
-        categoryBalances[percentage.categoryId] += categoryAmount;
-    });
-    
-    transactions.push(income2);
-    percentages.forEach(percentage => {
-        const categoryAmount = income2.amount * (percentage.value / 100);
-        categoryBalances[percentage.categoryId] += categoryAmount;
-    });
-    
-    // Gastos de ejemplo del mes actual (se descuentan de cada categoría)
-    transactions.push({
-        id: Date.now() + 3,
-        description: 'Supermercado',
-        categoryId: 1, // Necesidades
-        amount: 350,
-        date: formatDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), 3)),
-        type: 'expense'
-    });
-    categoryBalances[1] -= 350;
-    
-    transactions.push({
-        id: Date.now() + 4,
-        description: 'Gasolina',
-        categoryId: 1, // Necesidades
-        amount: 120,
-        date: formatDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), 8)),
-        type: 'expense'
-    });
-    categoryBalances[1] -= 120;
-    
-    transactions.push({
-        id: Date.now() + 5,
-        description: 'Cena con amigos',
-        categoryId: 4, // Entretenimiento
-        amount: 85,
-        date: formatDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), 12)),
-        type: 'expense'
-    });
-    categoryBalances[4] -= 85;
-    
-    transactions.push({
-        id: Date.now() + 6,
-        description: 'Ahorro mensual',
-        categoryId: 2, // Ahorro
-        amount: 500,
-        date: formatDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)),
-        type: 'expense'
-    });
-    categoryBalances[2] -= 500;
-    
-    // Gastos del mes anterior
-    const lastMonthIncome = {
-        id: Date.now() + 7,
-        description: 'Salario mes anterior',
-        categoryId: null,
-        amount: 2400,
-        date: formatDate(new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 5)),
-        type: 'income'
-    };
-    
-    transactions.push(lastMonthIncome);
-    percentages.forEach(percentage => {
-        const categoryAmount = lastMonthIncome.amount * (percentage.value / 100);
-        categoryBalances[percentage.categoryId] += categoryAmount;
-    });
-    
-    transactions.push({
-        id: Date.now() + 8,
-        description: 'Renta',
-        categoryId: 1,
-        amount: 900,
-        date: formatDate(new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1)),
-        type: 'expense'
-    });
-    categoryBalances[1] -= 900;
-    
-    transactions.push({
-        id: Date.now() + 9,
-        description: 'Curso online',
-        categoryId: 3,
-        amount: 150,
-        date: formatDate(new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 10)),
-        type: 'expense'
-    });
-    categoryBalances[3] -= 150;
-    
-    // Guardar y actualizar
-    saveTransactions();
-    saveCategoryBalances();
-    updateUI();
-    
-    showNotification('Datos de ejemplo cargados correctamente', 'success');
-}
-
 // Función auxiliar para formatear fecha como YYYY-MM-DD
 function formatDate(date) {
     const year = date.getFullYear();
@@ -1120,50 +1093,3 @@ function formatDate(date) {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
-
-// Agregar botón para cargar datos de ejemplo (solo en desarrollo)
-window.addEventListener('load', function() {
-    // Solo mostrar en la primera carga si no hay datos
-    if (transactions.length === 0) {
-        setTimeout(() => {
-            // Crear un botón para cargar datos de ejemplo
-            const loadSampleBtn = document.createElement('button');
-            loadSampleBtn.className = 'btn';
-            loadSampleBtn.innerHTML = '<i class="fas fa-vial"></i> Cargar Datos de Ejemplo';
-            loadSampleBtn.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                z-index: 999;
-                background-color: var(--warning-color);
-                color: var(--dark-color);
-                padding: 12px 20px;
-                border-radius: var(--border-radius);
-                border: none;
-                cursor: pointer;
-                font-weight: 600;
-                box-shadow: var(--box-shadow);
-                transition: var(--transition);
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            `;
-            loadSampleBtn.addEventListener('mouseenter', () => {
-                loadSampleBtn.style.transform = 'translateY(-2px)';
-                loadSampleBtn.style.boxShadow = '0 6px 12px rgba(0, 0, 0, 0.15)';
-            });
-            loadSampleBtn.addEventListener('mouseleave', () => {
-                loadSampleBtn.style.transform = 'translateY(0)';
-                loadSampleBtn.style.boxShadow = 'var(--box-shadow)';
-            });
-            loadSampleBtn.addEventListener('click', generateSampleData);
-            document.body.appendChild(loadSampleBtn);
-            
-            // Ocultar después de 30 segundos
-            setTimeout(() => {
-                loadSampleBtn.style.opacity = '0.7';
-                loadSampleBtn.title = 'Clic para cargar datos de ejemplo';
-            }, 30000);
-        }, 1000);
-    }
-});
