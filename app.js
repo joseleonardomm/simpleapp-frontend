@@ -8,16 +8,15 @@ let appState = {
     cart: [],
     storeId: null,
     isAdmin: false,
-    userEnabled: false, // Nuevo campo para verificar si el usuario está habilitado
-    categories: [], // Nuevo array para categorías
-    currentCategoryFilter: null, // Filtro actual de categoría
-    viewerImages: [], // Imágenes para el visor
-    viewerIndex: 0 // Índice actual en el visor
+    userEnabled: false,
+    categories: [],
+    currentCategoryFilter: null,
+    viewerImages: [],
+    viewerIndex: 0
 };
 
 // Referencias a elementos DOM
 const elements = {
-    // Botones principales
     authBtn: document.getElementById('auth-btn'),
     myStoreBtn: document.getElementById('my-store-btn'),
     viewCart: document.getElementById('view-cart'),
@@ -30,7 +29,6 @@ const elements = {
     financeBtn: document.getElementById('finance-btn'),
     financeButtonContainer: document.getElementById('finance-button-container'),
     
-    // Modales
     authModal: document.getElementById('auth-modal'),
     configModal: document.getElementById('config-modal'),
     productModal: document.getElementById('product-modal'),
@@ -38,14 +36,12 @@ const elements = {
     categoryModal: document.getElementById('category-modal'),
     imageViewerModal: document.getElementById('image-viewer-modal'),
     
-    // Paneles
     adminPanel: document.getElementById('admin-panel'),
     catalogPanel: document.getElementById('catalog-panel'),
     productsList: document.getElementById('products-list'),
     catalogProducts: document.getElementById('catalog-products'),
     cartItemsContainer: document.getElementById('cart-items-container'),
     
-    // Elementos de información
     cartCount: document.getElementById('cart-count'),
     cartTotal: document.getElementById('cart-total'),
     storeName: document.getElementById('store-name'),
@@ -54,16 +50,13 @@ const elements = {
     catalogDescription: document.getElementById('catalog-description'),
     currentYear: document.getElementById('current-year'),
     
-    // Logo de marca
     brandLogo: document.getElementById('brand-logo'),
     defaultLogo: document.getElementById('default-logo'),
     
-    // Formularios
     loginForm: document.getElementById('login-form'),
     registerForm: document.getElementById('register-form'),
     productForm: document.getElementById('product-form'),
     
-    // Campos de formularios
     loginEmail: document.getElementById('login-email'),
     loginPassword: document.getElementById('login-password'),
     registerStoreName: document.getElementById('register-store-name'),
@@ -79,27 +72,23 @@ const elements = {
     productDescription: document.getElementById('product-description'),
     productCategory: document.getElementById('product-category'),
     
-    // Nuevos elementos para logo y colores
     brandLogoUpload: document.getElementById('brand-logo-upload'),
     logoPreviewImage: document.getElementById('logo-preview-image'),
     logoPreview: document.getElementById('logo-preview'),
     selectedColorScheme: document.getElementById('selected-color-scheme'),
     colorSchemeOptions: document.querySelectorAll('.color-scheme-option'),
     
-    // Categorías
     manageCategoriesBtn: document.getElementById('manage-categories'),
     newCategoryName: document.getElementById('new-category-name'),
     addCategoryBtn: document.getElementById('add-category'),
     categoriesList: document.getElementById('categories-list'),
     
-    // Visor de imágenes
     viewerMainImage: document.getElementById('viewer-main-image'),
     viewerPrev: document.getElementById('viewer-prev'),
     viewerNext: document.getElementById('viewer-next'),
     currentImageIndex: document.getElementById('current-image-index'),
     totalImages: document.getElementById('total-images'),
     
-    // Tabs y otros
     tabBtns: document.querySelectorAll('.tab-btn'),
     authModalTitle: document.getElementById('auth-modal-title'),
     authError: document.getElementById('auth-error')
@@ -110,16 +99,9 @@ async function initApp() {
     console.log("Iniciando aplicación...");
     
     try {
-        // Establecer año actual
         elements.currentYear.textContent = new Date().getFullYear();
-        
-        // Configurar event listeners básicos primero
         setupEventListeners();
-        
-        // Verificar parámetros de URL
         checkURLParams();
-        
-        // Configurar autenticación de Firebase
         await setupFirebaseAuth();
         
         console.log("Aplicación inicializada correctamente");
@@ -134,15 +116,11 @@ function checkURLParams() {
     const urlParams = new URLSearchParams(window.location.search);
     const storeId = urlParams.get('store');
     
-    console.log("Parámetros de URL:", { storeId, fullUrl: window.location.href });
-    
     if (storeId) {
-        // Vista de cliente - cargar tienda específica
         appState.storeId = storeId;
         console.log("Modo CLIENTE - storeId:", storeId);
         loadStoreForCustomer(storeId);
     } else {
-        // Vista de propietario (requiere autenticación)
         console.log("Modo ADMIN - esperando autenticación");
         elements.catalogDescription.textContent = "Inicia sesión para administrar tu tienda";
     }
@@ -153,28 +131,20 @@ async function setupFirebaseAuth() {
     try {
         const { auth, onAuthStateChanged } = window.firebaseServices;
         
-        // Escuchar cambios en el estado de autenticación
         onAuthStateChanged(auth, async (user) => {
-            console.log("Estado de autenticación cambiado:", user ? "Usuario autenticado" : "Usuario no autenticado");
-            
             if (user) {
-                // Usuario autenticado
                 appState.currentUser = user;
                 console.log("Usuario autenticado:", { uid: user.uid, email: user.email });
                 
-                // Verificar si es el administrador
                 if (user.email === "jmcristiano7.18@gmail.com") {
                     appState.isAdmin = true;
-                    console.log("Usuario es el administrador principal");
                 }
                 
-                // Si no hay storeId en URL, usar el ID del usuario
                 if (!appState.storeId) {
                     appState.storeId = user.uid;
                     console.log("Modo ADMIN activado para usuario:", user.uid);
                     await loadUserStore(user.uid);
                 } else {
-                    // Si hay storeId en URL, verificar si es el propietario
                     if (appState.storeId === user.uid) {
                         await loadUserStore(user.uid);
                     }
@@ -182,7 +152,6 @@ async function setupFirebaseAuth() {
                 
                 updateAuthUI();
             } else {
-                // Usuario no autenticado
                 console.log("Usuario NO autenticado");
                 appState.currentUser = null;
                 appState.userEnabled = false;
@@ -200,32 +169,25 @@ async function setupFirebaseAuth() {
 // Cargar tienda del usuario
 async function loadUserStore(storeId) {
     console.log("loadUserStore llamado con storeId:", storeId);
-    console.log("Usuario actual:", appState.currentUser?.uid);
     
     try {
         const { db, doc, getDoc, setDoc, serverTimestamp } = window.firebaseServices;
         
-        // 1. Verificar si el usuario está habilitado
-        console.log("Verificando estado de usuario...");
         const userDocRef = doc(db, "users", storeId);
         const userSnap = await getDoc(userDocRef);
         
         if (!userSnap.exists()) {
-            // Crear documento de usuario si no existe
-            console.log("Usuario no existe en Firestore, creando...");
             await setDoc(userDocRef, {
                 email: appState.currentUser.email,
                 storeId: storeId,
-                enabled: false, // Por defecto desactivado
+                enabled: false,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             });
             
             appState.userEnabled = false;
             showAccountDisabledMessage();
-            
         } else {
-            // Verificar estado de habilitación
             const userData = userSnap.data();
             const isEnabled = userData.enabled === true;
             appState.userEnabled = isEnabled;
@@ -239,8 +201,6 @@ async function loadUserStore(storeId) {
             console.log("Usuario está habilitado, continuando...");
         }
         
-        // 2. Cargar tienda (solo si el usuario está habilitado)
-        console.log("Buscando tienda en Firestore...");
         const storeRef = doc(db, "stores", storeId);
         const storeSnap = await getDoc(storeRef);
         
@@ -251,7 +211,6 @@ async function loadUserStore(storeId) {
             elements.storeIdDisplay.textContent = storeId;
             await loadStoreProducts(storeId);
             
-            // Mostrar panel de administración solo si el usuario está habilitado
             if (appState.userEnabled) {
                 console.log("Mostrando panel de administración...");
                 elements.adminPanel.classList.remove('hidden');
@@ -262,11 +221,9 @@ async function loadUserStore(storeId) {
                 elements.manageCategoriesBtn.classList.remove('hidden');
             }
             
-            // Cargar carrito
             loadCartFromLocalStorage();
         } else {
             console.log("Tienda NO existe, creando...");
-            // Crear tienda si no existe
             await createStoreForUser(storeId);
         }
         
@@ -276,13 +233,11 @@ async function loadUserStore(storeId) {
     }
 }
 
-// Actualizar branding de la tienda (logo, nombre, colores)
+// Actualizar branding de la tienda
 async function updateStoreBranding(storeData) {
-    // Actualizar nombre de la tienda
     elements.storeName.textContent = storeData.storeName || "Mi Tienda";
     elements.storeIdDisplay.textContent = appState.storeId;
     
-    // Actualizar logo
     if (storeData.logoUrl) {
         elements.brandLogo.src = storeData.logoUrl;
         elements.brandLogo.classList.remove('hidden');
@@ -292,18 +247,15 @@ async function updateStoreBranding(storeData) {
         elements.defaultLogo.classList.remove('hidden');
     }
     
-    // Actualizar esquema de colores
     if (storeData.colorScheme) {
         applyColorScheme(storeData.colorScheme);
     } else {
-        // Esquema por defecto (WhatsApp)
         applyColorScheme('whatsapp');
     }
 }
 
 // Aplicar esquema de colores
 function applyColorScheme(scheme) {
-    // Remover todas las clases de esquema de colores
     document.body.classList.remove(
         'color-scheme-whatsapp',
         'color-scheme-blue',
@@ -314,10 +266,8 @@ function applyColorScheme(scheme) {
         'color-scheme-black-silver'
     );
     
-    // Aplicar nueva clase de esquema
     document.body.classList.add(`color-scheme-${scheme}`);
     
-    // Actualizar el botón activo en el modal si está abierto
     if (elements.colorSchemeOptions) {
         elements.colorSchemeOptions.forEach(option => {
             if (option.dataset.scheme === scheme) {
@@ -328,7 +278,6 @@ function applyColorScheme(scheme) {
         });
     }
     
-    // Actualizar el input hidden
     if (elements.selectedColorScheme) {
         elements.selectedColorScheme.value = scheme;
     }
@@ -338,7 +287,6 @@ function applyColorScheme(scheme) {
 function showAccountDisabledMessage() {
     console.log("Mostrando mensaje de cuenta deshabilitada");
     
-    // Ocultar panel de administración
     elements.adminPanel.classList.add('hidden');
     elements.catalogPanel.classList.remove('hidden');
     elements.configBtn.classList.add('hidden');
@@ -346,7 +294,6 @@ function showAccountDisabledMessage() {
     elements.manageCategoriesBtn.classList.add('hidden');
     elements.financeButtonContainer.classList.add('hidden');
     
-    // Mostrar mensaje al usuario
     elements.catalogDescription.innerHTML = `
         <div style="text-align: center; padding: 30px;">
             <h3><i class="fas fa-hourglass-half"></i> Cuenta Pendiente de Activación</h3>
@@ -356,7 +303,6 @@ function showAccountDisabledMessage() {
         </div>
     `;
     
-    // Mostrar notificación
     showNotification("Tu cuenta está pendiente de activación", "warning");
 }
 
@@ -375,15 +321,12 @@ async function loadStoreForCustomer(storeId) {
             await updateStoreBranding(appState.currentStore);
             elements.catalogDescription.textContent = `Explora los productos de ${appState.currentStore.storeName}`;
             
-            // Ocultar botones de administración (modo cliente)
             elements.authBtn.classList.add('hidden');
             elements.configBtn.classList.add('hidden');
             elements.myStoreBtn.classList.add('hidden');
             elements.financeButtonContainer.classList.add('hidden');
             
             await loadStoreProducts(storeId);
-            
-            // Cargar carrito
             loadCartFromLocalStorage();
         } else {
             showNotification("Tienda no encontrada", "error");
@@ -415,7 +358,6 @@ async function createStoreForUser(storeId) {
         appState.currentStore = storeData;
         await updateStoreBranding(storeData);
         
-        // Solo mostrar panel de administración si el usuario está habilitado
         if (appState.userEnabled) {
             elements.adminPanel.classList.remove('hidden');
             elements.catalogPanel.classList.add('hidden');
@@ -425,7 +367,6 @@ async function createStoreForUser(storeId) {
             elements.manageCategoriesBtn.classList.remove('hidden');
         }
         
-        // Cargar carrito
         loadCartFromLocalStorage();
         
         console.log("Tienda creada exitosamente");
@@ -456,9 +397,7 @@ async function loadStoreProducts(storeId) {
         
         console.log(`Productos cargados: ${appState.products.length}`);
         
-        // Cargar categorías después de cargar productos
         await loadCategories();
-        
         updateUI();
     } catch (error) {
         console.error("Error cargando productos:", error);
@@ -484,10 +423,8 @@ async function loadCategories() {
             });
         });
         
-        // Actualizar selector de categorías en formulario de producto
         updateCategorySelect();
         
-        // Actualizar lista de categorías en el modal si está abierto
         if (elements.categoryModal && elements.categoryModal.classList.contains('active')) {
             renderCategoriesList();
         }
@@ -502,13 +439,9 @@ async function loadCategories() {
 function updateCategorySelect() {
     if (!elements.productCategory) return;
     
-    // Guardar valor actual
     const currentValue = elements.productCategory.value;
-    
-    // Limpiar opciones excepto la primera
     elements.productCategory.innerHTML = '<option value="">Sin categoría</option>';
     
-    // Agregar categorías
     appState.categories.forEach(category => {
         const option = document.createElement('option');
         option.value = category.id;
@@ -516,7 +449,6 @@ function updateCategorySelect() {
         elements.productCategory.appendChild(option);
     });
     
-    // Restaurar valor si existe
     if (currentValue) {
         elements.productCategory.value = currentValue;
     }
@@ -526,7 +458,6 @@ function updateCategorySelect() {
 function setupEventListeners() {
     console.log("Configurando event listeners...");
     
-    // Botones principales
     if (elements.authBtn) elements.authBtn.addEventListener('click', openAuthModal);
     if (elements.myStoreBtn) elements.myStoreBtn.addEventListener('click', () => {
         if (appState.currentUser) {
@@ -547,20 +478,16 @@ function setupEventListeners() {
         window.location.href = 'finanzas.html';
     });
     
-    // Gestión de categorías
     if (elements.manageCategoriesBtn) elements.manageCategoriesBtn.addEventListener('click', openCategoryModal);
     if (elements.addCategoryBtn) elements.addCategoryBtn.addEventListener('click', addCategory);
     
-    // Visor de imágenes
     if (elements.viewerPrev) elements.viewerPrev.addEventListener('click', showPreviousImage);
     if (elements.viewerNext) elements.viewerNext.addEventListener('click', showNextImage);
     
-    // Formularios
     if (elements.loginForm) elements.loginForm.addEventListener('submit', handleLogin);
     if (elements.registerForm) elements.registerForm.addEventListener('submit', handleRegister);
     if (elements.productForm) elements.productForm.addEventListener('submit', handleProductSubmit);
     
-    // Tabs de autenticación
     if (elements.tabBtns) {
         elements.tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -570,7 +497,6 @@ function setupEventListeners() {
         });
     }
     
-    // Selector de combinación de colores
     if (elements.colorSchemeOptions) {
         elements.colorSchemeOptions.forEach(option => {
             option.addEventListener('click', () => {
@@ -578,24 +504,19 @@ function setupEventListeners() {
                 elements.colorSchemeOptions.forEach(opt => opt.classList.remove('selected'));
                 option.classList.add('selected');
                 elements.selectedColorScheme.value = scheme;
-                
-                // Aplicar el esquema inmediatamente para vista previa
                 applyColorScheme(scheme);
             });
         });
     }
     
-    // Logo upload
     if (elements.brandLogoUpload) {
         elements.brandLogoUpload.addEventListener('change', previewBrandLogo);
     }
     
-    // Cerrar modales
     document.querySelectorAll('.close-modal').forEach(btn => {
         btn.addEventListener('click', closeAllModals);
     });
     
-    // Cerrar modal al hacer clic fuera
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
@@ -604,37 +525,31 @@ function setupEventListeners() {
         });
     });
     
-    // Gestión de imágenes en formulario de producto
     const addImageBtn = document.getElementById('add-image');
     if (addImageBtn) addImageBtn.addEventListener('click', addImageInput);
     
     // Event delegation para botones dinámicos
     document.addEventListener('click', function(e) {
-        // Editar producto
         if (e.target.closest('.edit-product')) {
             const productId = e.target.closest('.edit-product').dataset.id;
             openEditProductModal(productId);
         }
         
-        // Eliminar producto
         if (e.target.closest('.delete-product')) {
             const productId = e.target.closest('.delete-product').dataset.id;
             deleteProduct(productId);
         }
         
-        // Agregar al carrito
         if (e.target.closest('.add-to-cart')) {
             const productId = e.target.closest('.add-to-cart').dataset.id;
             addToCart(productId);
         }
         
-        // Quitar del carrito
         if (e.target.closest('.remove-from-cart')) {
             const productId = e.target.closest('.remove-from-cart').dataset.id;
             removeFromCart(productId);
         }
         
-        // Cantidad en carrito
         if (e.target.closest('.decrease-quantity')) {
             const productId = e.target.closest('.decrease-quantity').dataset.id;
             updateCartQuantity(productId, -1);
@@ -645,13 +560,11 @@ function setupEventListeners() {
             updateCartQuantity(productId, 1);
         }
         
-        // Eliminar del carrito
         if (e.target.closest('.cart-item-remove')) {
             const productId = e.target.closest('.cart-item-remove').dataset.id;
             removeFromCart(productId);
         }
         
-        // Remover imagen en formulario de producto
         if (e.target.closest('.btn-remove-image')) {
             const imageInput = e.target.closest('.image-input');
             if (imageInput) {
@@ -683,7 +596,6 @@ function setupEventListeners() {
             const product = appState.products.find(p => p.id === productId);
             
             if (product && product.images) {
-                // Encontrar índice de la imagen clickeada
                 const imgIndex = Array.from(img.parentElement.children).indexOf(img);
                 openImageViewer(product.images, imgIndex);
             }
@@ -694,31 +606,25 @@ function setupEventListeners() {
             const filterBtn = e.target.closest('.category-filter');
             const categoryId = filterBtn.dataset.category;
             
-            // Actualizar filtro activo
             document.querySelectorAll('.category-filter').forEach(btn => {
                 btn.classList.remove('active');
             });
             
             if (categoryId === appState.currentCategoryFilter) {
-                // Si ya está activo, desactivar
                 appState.currentCategoryFilter = null;
             } else {
-                // Activar nuevo filtro
                 filterBtn.classList.add('active');
                 appState.currentCategoryFilter = categoryId;
             }
             
-            // Renderizar productos filtrados
             renderCatalogProducts();
         }
         
-        // Editar categoría
         if (e.target.closest('.edit-category')) {
             const categoryId = e.target.closest('.edit-category').dataset.id;
             editCategory(categoryId);
         }
         
-        // Eliminar categoría
         if (e.target.closest('.delete-category')) {
             const btn = e.target.closest('.delete-category');
             if (!btn.disabled) {
@@ -728,7 +634,6 @@ function setupEventListeners() {
         }
     });
     
-    // Previsualización de imágenes en formulario de producto
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('image-file')) {
             previewImage(e.target);
@@ -736,7 +641,7 @@ function setupEventListeners() {
     });
 }
 
-// Navegación del carrusel - ARREGLADA
+// Navegación del carrusel - ARREGLADO COMPLETAMENTE
 function navigateCarousel(productId, direction, specificIndex = null) {
     const productCard = document.querySelector(`.product-card[data-id="${productId}"]`);
     if (!productCard) return;
@@ -761,9 +666,10 @@ function navigateCarousel(productId, direction, specificIndex = null) {
         newIndex = (currentIndex + direction + images.length) % images.length;
     }
     
-    // Calcular el desplazamiento CORRECTO para el carrusel
-    // Cada imagen ocupa el 100% del contenedor, el carrusel tiene ancho del 100% * número de imágenes
-    const translateX = -(newIndex * 100); // Mover el porcentaje correcto
+    // Calcular desplazamiento CORRECTO
+    // El carrusel tiene width: 100% * número de imágenes
+    // Cada imagen ocupa 100% del ancho del contenedor padre
+    const translateX = -(newIndex * 100); // Porcentaje de desplazamiento
     carousel.style.transform = `translateX(${translateX}%)`;
     
     // Actualizar puntos activos
@@ -868,7 +774,6 @@ async function handleRegister(e) {
     const password = elements.registerPassword.value;
     const whatsapp = elements.registerWhatsapp.value.trim();
     
-    // Validaciones
     if (!storeName || !email || !password || !whatsapp) {
         showAuthError("Por favor completa todos los campos");
         return;
@@ -894,23 +799,20 @@ async function handleRegister(e) {
             serverTimestamp 
         } = window.firebaseServices;
         
-        // Crear usuario en Authentication
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        // Crear documento de usuario en Firestore (deshabilitado por defecto)
         const userData = {
             email: email,
             storeId: user.uid,
             storeName: storeName,
-            enabled: false, // Deshabilitado hasta que el admin lo active
+            enabled: false,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         };
         
         await setDoc(doc(db, "users", user.uid), userData);
         
-        // Crear tienda
         const storeData = {
             storeName: storeName,
             ownerId: user.uid,
@@ -925,11 +827,8 @@ async function handleRegister(e) {
         await setDoc(doc(db, "stores", user.uid), storeData);
         
         closeAllModals();
-        
-        // Mostrar mensaje especial para registro
         showNotification("¡Cuenta creada exitosamente! Pendiente de activación por el administrador.", "warning");
         
-        // Redirigir a su tienda (pero estará deshabilitada hasta que la actives)
         setTimeout(() => {
             window.location.href = `/?store=${user.uid}`;
         }, 2000);
@@ -956,7 +855,6 @@ async function handleRegister(e) {
 async function handleProductSubmit(e) {
     e.preventDefault();
     
-    // Verificar que el usuario esté habilitado
     if (!appState.userEnabled) {
         showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
         return;
@@ -968,20 +866,17 @@ async function handleProductSubmit(e) {
     const description = elements.productDescription.value.trim();
     const categoryId = elements.productCategory.value || null;
     
-    // Validaciones
     if (!name || !price || price <= 0 || isNaN(price)) {
         showNotification("Completa nombre y precio válido", "error");
         return;
     }
     
-    // Obtener archivos de imágenes
     const imageInputs = document.querySelectorAll('.image-file');
     const files = Array.from(imageInputs)
         .map(input => input.files[0])
         .filter(file => file);
     
     if (files.length === 0) {
-        // Si estamos editando y no hay archivos nuevos, mantener las existentes
         const existingImages = document.querySelectorAll('.existing-image');
         if (existingImages.length === 0) {
             showNotification("Debes agregar al menos una imagen", "error");
@@ -992,10 +887,9 @@ async function handleProductSubmit(e) {
     try {
         let imageUrls = [];
         
-        // Si hay archivos nuevos, subirlos
         if (files.length > 0) {
             for (const file of files) {
-                if (file.size > 2 * 1024 * 1024) { // 2MB
+                if (file.size > 2 * 1024 * 1024) {
                     showNotification(`La imagen ${file.name} es demasiado grande (máximo 2MB)`, "error");
                     return;
                 }
@@ -1004,7 +898,6 @@ async function handleProductSubmit(e) {
                 imageUrls.push(imageUrl);
             }
         } else if (productId) {
-            // Si estamos editando y no hay archivos nuevos, usar las imágenes existentes
             const existingImages = document.querySelectorAll('.existing-image');
             existingImages.forEach(input => {
                 if (input.value) imageUrls.push(input.value);
@@ -1026,7 +919,6 @@ async function handleProductSubmit(e) {
         };
         
         if (productId) {
-            // Actualizar producto existente
             await window.firebaseServices.updateDoc(
                 window.firebaseServices.doc(
                     window.firebaseServices.db, 
@@ -1039,7 +931,6 @@ async function handleProductSubmit(e) {
             );
             showNotification("Producto actualizado", "success");
         } else {
-            // Crear nuevo producto
             productData.createdAt = window.firebaseServices.serverTimestamp();
             
             const docRef = await window.firebaseServices.addDoc(
@@ -1052,15 +943,12 @@ async function handleProductSubmit(e) {
                 productData
             );
             
-            // Si hay imágenes temporales, podríamos moverlas a la carpeta del producto
-            // Esto es opcional pero mejora la organización
             const newProductId = docRef.id;
             console.log("Nuevo producto creado con ID:", newProductId);
             
             showNotification("Producto agregado", "success");
         }
         
-        // Recargar productos y cerrar modal
         await loadStoreProducts(appState.storeId);
         closeAllModals();
     } catch (error) {
@@ -1084,7 +972,6 @@ async function deleteProduct(productId) {
             )
         );
         
-        // Eliminar del carrito si está
         appState.cart = appState.cart.filter(item => item.productId !== productId);
         saveCartToLocalStorage();
         
@@ -1098,7 +985,6 @@ async function deleteProduct(productId) {
 
 // Guardar configuración de tienda
 async function saveStoreConfig() {
-    // Verificar que el usuario esté habilitado
     if (!appState.userEnabled) {
         showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
         return;
@@ -1121,7 +1007,6 @@ async function saveStoreConfig() {
     try {
         let logoUrl = appState.currentStore.logoUrl;
         
-        // Si hay un nuevo logo, subirlo
         if (elements.brandLogoUpload.files[0]) {
             const logoFile = elements.brandLogoUpload.files[0];
             
@@ -1130,7 +1015,6 @@ async function saveStoreConfig() {
                 return;
             }
             
-            // Subir logo a Firebase Storage usando la función específica
             logoUrl = await window.uploadLogo(logoFile, appState.storeId);
         }
         
@@ -1151,13 +1035,11 @@ async function saveStoreConfig() {
             storeData
         );
         
-        // Actualizar el estado actual
         appState.currentStore.whatsappNumber = whatsapp;
         appState.currentStore.storeName = storeName;
         appState.currentStore.logoUrl = logoUrl;
         appState.currentStore.colorScheme = colorScheme;
         
-        // Aplicar cambios en la UI
         await updateStoreBranding(appState.currentStore);
         
         closeAllModals();
@@ -1176,7 +1058,6 @@ function copyStoreLink() {
             showNotification("Enlace copiado al portapapeles", "success");
         })
         .catch(() => {
-            // Fallback para navegadores antiguos
             elements.storeLinkInput.select();
             document.execCommand('copy');
             showNotification("Enlace copiado", "success");
@@ -1190,7 +1071,6 @@ function loadStoreConfig() {
         elements.storeDisplayName.value = appState.currentStore.storeName || "";
         elements.storeLinkInput.value = `${window.location.origin}/?store=${appState.storeId}`;
         
-        // Cargar logo
         if (appState.currentStore.logoUrl) {
             elements.logoPreviewImage.src = appState.currentStore.logoUrl;
             elements.logoPreviewImage.classList.remove('hidden');
@@ -1198,10 +1078,8 @@ function loadStoreConfig() {
             elements.logoPreviewImage.classList.add('hidden');
         }
         
-        // Resetear input de archivo
         elements.brandLogoUpload.value = '';
         
-        // Cargar esquema de colores
         const colorScheme = appState.currentStore.colorScheme || 'whatsapp';
         elements.selectedColorScheme.value = colorScheme;
         applyColorScheme(colorScheme);
@@ -1215,7 +1093,6 @@ function updateAuthUI() {
         elements.authBtn.onclick = handleLogout;
         elements.myStoreBtn.classList.remove('hidden');
         
-        // Mostrar botón de finanzas solo si el usuario está habilitado
         if (appState.userEnabled) {
             elements.financeButtonContainer.classList.remove('hidden');
         } else {
@@ -1234,14 +1111,12 @@ async function handleLogout() {
     try {
         await window.firebaseServices.signOut(window.firebaseServices.auth);
         
-        // Limpiar estado
         appState.currentUser = null;
         appState.currentStore = null;
         appState.products = [];
         appState.categories = [];
         appState.userEnabled = false;
         
-        // Restablecer UI
         elements.adminPanel.classList.add('hidden');
         elements.catalogPanel.classList.remove('hidden');
         elements.configBtn.classList.add('hidden');
@@ -1253,19 +1128,15 @@ async function handleLogout() {
         elements.storeTagline.textContent = "Catálogo Digital";
         elements.catalogDescription.textContent = "Inicia sesión para administrar tu tienda";
         
-        // Restablecer logo
         elements.brandLogo.classList.add('hidden');
         elements.defaultLogo.classList.remove('hidden');
         
-        // Restablecer esquema de colores por defecto
         applyColorScheme('whatsapp');
         
-        // Limpiar carrito
         appState.cart = [];
         saveCartToLocalStorage();
         updateCartCount();
         
-        // Redirigir a la página principal
         window.location.href = '/';
         
         showNotification("Sesión cerrada", "success");
@@ -1320,7 +1191,6 @@ function openAuthModal() {
 
 // Abrir modal de configuración
 function openConfigModal() {
-    // Verificar que el usuario esté habilitado
     if (!appState.userEnabled) {
         showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
         return;
@@ -1358,7 +1228,6 @@ function renderCategoriesList() {
     
     let html = '';
     
-    // Contar productos por categoría
     const categoryCounts = {};
     appState.products.forEach(product => {
         if (product.categoryId) {
@@ -1412,10 +1281,7 @@ async function addCategory() {
         
         await addDoc(collection(db, "stores", appState.storeId, "categories"), categoryData);
         
-        // Limpiar campo
         elements.newCategoryName.value = '';
-        
-        // Recargar categorías
         await loadCategories();
         
         showNotification("Categoría agregada", "success");
@@ -1441,9 +1307,7 @@ async function editCategory(categoryId) {
                 updatedAt: serverTimestamp()
             });
             
-            // Recargar categorías
             await loadCategories();
-            
             showNotification("Categoría actualizada", "success");
         } catch (error) {
             console.error("Error actualizando categoría:", error);
@@ -1461,9 +1325,7 @@ async function deleteCategory(categoryId) {
         
         await deleteDoc(doc(db, "stores", appState.storeId, "categories", categoryId));
         
-        // Recargar categorías
         await loadCategories();
-        
         showNotification("Categoría eliminada", "success");
     } catch (error) {
         console.error("Error eliminando categoría:", error);
@@ -1473,7 +1335,6 @@ async function deleteCategory(categoryId) {
 
 // Abrir modal para agregar producto
 function openAddProductModal() {
-    // Verificar que el usuario esté habilitado
     if (!appState.userEnabled) {
         showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
         return;
@@ -1484,7 +1345,6 @@ function openAddProductModal() {
     elements.productCategory.value = "";
     document.getElementById('modal-title').textContent = "Agregar Producto";
     
-    // Resetear inputs de imagen
     const imageContainer = document.querySelector('.image-inputs');
     imageContainer.innerHTML = `
         <div class="image-input">
@@ -1503,7 +1363,6 @@ function openAddProductModal() {
 
 // Abrir modal para editar producto
 function openEditProductModal(productId) {
-    // Verificar que el usuario esté habilitado
     if (!appState.userEnabled) {
         showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
         return;
@@ -1520,7 +1379,6 @@ function openEditProductModal(productId) {
     elements.productCategory.value = product.categoryId || "";
     document.getElementById('modal-title').textContent = "Editar Producto";
     
-    // Configurar inputs de imagen
     const imageContainer = document.querySelector('.image-inputs');
     imageContainer.innerHTML = "";
     
@@ -1537,7 +1395,6 @@ function openEditProductModal(productId) {
         });
     }
     
-    // Agregar inputs para nuevas imágenes
     const newInputs = 2;
     for (let i = 0; i < newInputs; i++) {
         const div = document.createElement('div');
@@ -1549,7 +1406,6 @@ function openEditProductModal(productId) {
         imageContainer.appendChild(div);
     }
     
-    // Actualizar vista previa
     const previewContainer = document.querySelector('.preview-container');
     previewContainer.innerHTML = "";
     
@@ -1619,10 +1475,8 @@ function closeAllModals() {
 
 // Actualizar UI
 function updateUI() {
-    // Actualizar contador del carrito
     updateCartCount();
     
-    // Renderizar productos según el modo
     if (appState.currentUser && appState.userEnabled && appState.storeId === appState.currentUser.uid) {
         renderAdminProducts();
     } else {
@@ -1657,7 +1511,6 @@ function renderAdminProducts() {
 function renderCatalogProducts() {
     const container = elements.catalogProducts;
     
-    // Filtrar productos por categoría si hay filtro activo
     let filteredProducts = appState.products;
     if (appState.currentCategoryFilter) {
         filteredProducts = appState.products.filter(
@@ -1678,12 +1531,10 @@ function renderCatalogProducts() {
     
     container.innerHTML = '';
     
-    // Renderizar filtros de categoría (solo si hay categorías)
     if (appState.categories.length > 0) {
         const filtersContainer = document.createElement('div');
         filtersContainer.className = 'category-filters';
         
-        // Botón "Todos"
         const allBtn = document.createElement('button');
         allBtn.className = `category-filter ${!appState.currentCategoryFilter ? 'active' : ''}`;
         allBtn.textContent = 'Todos';
@@ -1697,7 +1548,6 @@ function renderCatalogProducts() {
         });
         filtersContainer.appendChild(allBtn);
         
-        // Botones por categoría
         appState.categories.forEach(category => {
             const btn = document.createElement('button');
             btn.className = `category-filter ${appState.currentCategoryFilter === category.id ? 'active' : ''}`;
@@ -1709,39 +1559,35 @@ function renderCatalogProducts() {
         container.appendChild(filtersContainer);
     }
     
-    // Renderizar productos
     filteredProducts.forEach(product => {
         const productCard = createProductCard(product, false);
         container.appendChild(productCard);
     });
 }
 
-// Crear tarjeta de producto
+// Crear tarjeta de producto - ARREGLADA para mostrar imágenes completas
 function createProductCard(product, isAdmin) {
     const card = document.createElement('div');
     card.className = 'product-card';
     card.dataset.id = product.id;
     
-    // Verificar si está en el carrito
     const cartItem = appState.cart.find(item => item.productId === product.id);
     const inCart = cartItem ? true : false;
     const cartQuantity = cartItem ? cartItem.quantity : 0;
     
-    // Obtener nombre de categoría
     const category = product.categoryId ? 
         appState.categories.find(c => c.id === product.categoryId) : null;
     
-    // CARRUSEL DE IMÁGENES - ARREGLADO
+    // CARRUSEL CORREGIDO - IMÁGENES SE VEN COMPLETAS
     let carouselHTML = '';
     if (product.images && product.images.length > 0) {
-        // El carrusel tiene un ancho del 100% * número de imágenes
         carouselHTML = `
             <div class="product-image-container">
                 <div class="product-image-carousel" style="width: ${100 * product.images.length}%;">
                     ${product.images.map((img, index) => `
                         <img src="${img}" alt="${product.name} - Imagen ${index + 1}" 
                              class="product-image" 
-                             onerror="this.src='https://via.placeholder.com/400x300?text=Imagen+no+disponible'"
+                             onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300?text=Imagen+no+disponible'"
                              data-index="${index}">
                     `).join('')}
                 </div>
@@ -1777,7 +1623,6 @@ function createProductCard(product, isAdmin) {
     let actionsHTML = '';
     
     if (isAdmin && appState.userEnabled) {
-        // Acciones para administrador (solo si está habilitado)
         actionsHTML = `
             <div class="product-actions">
                 <button class="btn btn-secondary edit-product" data-id="${product.id}">
@@ -1789,7 +1634,6 @@ function createProductCard(product, isAdmin) {
             </div>
         `;
     } else if (isAdmin && !appState.userEnabled) {
-        // Mensaje para administrador no habilitado
         actionsHTML = `
             <div class="product-actions">
                 <p style="color: #dc3545; font-size: 0.9rem; margin: 10px 0;">
@@ -1799,7 +1643,6 @@ function createProductCard(product, isAdmin) {
             </div>
         `;
     } else {
-        // Acciones para cliente
         actionsHTML = `
             <div class="product-actions">
                 ${inCart ? `
@@ -1819,7 +1662,6 @@ function createProductCard(product, isAdmin) {
         `;
     }
     
-    // Agregar badge de categoría si existe
     const categoryBadge = category ? 
         `<span class="product-category-badge">${category.name}</span>` : '';
     
@@ -1988,14 +1830,12 @@ function checkoutViaWhatsApp() {
     
     if (!appState.currentStore || !appState.currentStore.whatsappNumber) {
         showNotification("La tienda no tiene WhatsApp configurado", "error");
-        // Si el usuario es el propietario y está habilitado, abrir configuración
         if (appState.currentUser && appState.userEnabled && appState.storeId === appState.currentUser.uid) {
             openConfigModal();
         }
         return;
     }
     
-    // Generar mensaje
     let message = `Hola, quiero hacer un pedido de ${appState.currentStore.storeName}:\n\n`;
     
     appState.cart.forEach(item => {
@@ -2007,14 +1847,11 @@ function checkoutViaWhatsApp() {
     message += `\n*Total: $${total.toFixed(2)}*`;
     message += `\n\nPedido generado desde Catálogo Digital`;
     
-    // Codificar para URL
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${appState.currentStore.whatsappNumber}?text=${encodedMessage}`;
     
-    // Abrir en nueva pestaña
     window.open(whatsappUrl, '_blank');
     
-    // Opcional: vaciar carrito después
     setTimeout(() => {
         if (confirm("¿Deseas vaciar el carrito después de enviar el pedido?")) {
             clearCart();
@@ -2024,13 +1861,11 @@ function checkoutViaWhatsApp() {
 
 // Mostrar notificación
 function showNotification(message, type = "success") {
-    // Eliminar notificación anterior
     const existingNotification = document.querySelector('.notification');
     if (existingNotification) {
         existingNotification.remove();
     }
     
-    // Crear nueva notificación
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.innerHTML = `
@@ -2040,7 +1875,6 @@ function showNotification(message, type = "success") {
     
     document.body.appendChild(notification);
     
-    // Eliminar después de 3 segundos
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => {

@@ -347,30 +347,33 @@ body {
     border-color: var(--primary-color);
 }
 
-/* CARRUSEL DE IMÁGENES - ARREGLADO */
+/* CARRUSEL DE IMÁGENES - COMPLETAMENTE ARREGLADO */
 .product-image-container {
     position: relative;
     height: 200px;
     overflow: hidden;
-    background-color: #f8f9fa; /* Fondo para cuando las imágenes no llenan el espacio */
+    background-color: #f8f9fa;
+    width: 100%;
 }
 
 .product-image-carousel {
     display: flex;
     transition: transform 0.5s ease;
     height: 100%;
-    width: 100%; /* Asegurar que ocupe el 100% */
+    width: 100%;
+    align-items: center; /* Centra verticalmente las imágenes */
 }
 
-/* IMÁGENES CON AJUSTE SIN DISTORSIÓN */
+/* IMÁGENES CON AJUSTE CORRECTO - SE VEN COMPLETAS */
 .product-image-carousel img {
-    width: 100%; /* Cada imagen ocupa el 100% del ancho del contenedor */
+    width: 100%;
     height: 100%;
-    object-fit: contain; /* Cambiado de 'cover' a 'contain' para que no recorte */
-    flex-shrink: 0; /* Evita que las imágenes se reduzcan */
+    object-fit: contain; /* Muestra la imagen completa sin recortar */
+    flex-shrink: 0;
     cursor: pointer;
     transition: transform 0.3s ease;
-    background-color: #f8f9fa; /* Fondo para imágenes no cuadradas */
+    background-color: #f8f9fa;
+    display: block; /* Elimina espacio debajo de la imagen */
 }
 
 /* Mantener el hover effect */
@@ -381,13 +384,13 @@ body {
 /* Para dispositivos móviles */
 @media (max-width: 768px) {
     .product-image-container {
-        height: 180px; /* Altura ajustada para móviles */
+        height: 180px;
     }
 }
 
 @media (max-width: 480px) {
     .product-image-container {
-        height: 160px; /* Altura aún más pequeña para móviles muy pequeños */
+        height: 160px;
     }
 }
 
@@ -545,7 +548,7 @@ body {
 .cart-item-image {
     width: 80px;
     height: 80px;
-    object-fit: contain; /* Cambiado de 'cover' a 'contain' */
+    object-fit: contain;
     border-radius: var(--border-radius);
     background-color: #f8f9fa;
 }
@@ -714,7 +717,7 @@ body {
 .viewer-image {
     width: 100%;
     max-height: 70vh;
-    object-fit: contain; /* Asegurar que no se distorsione */
+    object-fit: contain;
     background-color: rgba(0, 0, 0, 0.1);
 }
 
@@ -881,7 +884,7 @@ body {
     max-height: 150px;
     border-radius: 8px;
     border: 2px solid var(--light-gray);
-    object-fit: contain; /* Asegurar que no se distorsione */
+    object-fit: contain;
     background-color: #f8f9fa;
 }
 
@@ -1128,7 +1131,7 @@ body {
 .preview-image {
     width: 80px;
     height: 80px;
-    object-fit: contain; /* Asegurar que no se distorsione */
+    object-fit: contain;
     border-radius: var(--border-radius);
     border: 2px solid var(--light-gray);
     background-color: #f8f9fa;
