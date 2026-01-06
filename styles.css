@@ -347,7 +347,7 @@ body {
     border-color: var(--primary-color);
 }
 
-/* CARRUSEL DE IMÁGENES - COMPLETAMENTE ARREGLADO */
+/* CARRUSEL DE IMÁGENES - ARREGLADO PARA MOSTRAR IMÁGENES COMPLETAS */
 .product-image-container {
     position: relative;
     height: 200px;
@@ -361,37 +361,24 @@ body {
     transition: transform 0.5s ease;
     height: 100%;
     width: 100%;
-    align-items: center; /* Centra verticalmente las imágenes */
 }
 
-/* IMÁGENES CON AJUSTE CORRECTO - SE VEN COMPLETAS */
+/* IMÁGENES CON AJUSTE CORRECTO - RECORTANDO BORDES PARA LLENAR EL CONTENEDOR */
 .product-image-carousel img {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* Muestra la imagen completa sin recortar */
+    object-fit: cover; /* Recorta bordes para llenar el contenedor */
+    object-position: center; /* Centra la imagen al recortar */
     flex-shrink: 0;
     cursor: pointer;
     transition: transform 0.3s ease;
     background-color: #f8f9fa;
-    display: block; /* Elimina espacio debajo de la imagen */
+    display: block;
 }
 
 /* Mantener el hover effect */
 .product-image-carousel img:hover {
     transform: scale(1.02);
-}
-
-/* Para dispositivos móviles */
-@media (max-width: 768px) {
-    .product-image-container {
-        height: 180px;
-    }
-}
-
-@media (max-width: 480px) {
-    .product-image-container {
-        height: 160px;
-    }
 }
 
 /* Controles del carrusel */
@@ -453,6 +440,19 @@ body {
 .carousel-dot.active {
     background-color: white;
     transform: scale(1.2);
+}
+
+/* Para dispositivos móviles */
+@media (max-width: 768px) {
+    .product-image-container {
+        height: 180px;
+    }
+}
+
+@media (max-width: 480px) {
+    .product-image-container {
+        height: 160px;
+    }
 }
 
 .product-info {
