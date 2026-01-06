@@ -347,30 +347,48 @@ body {
     border-color: var(--primary-color);
 }
 
-/* Carrusel de imágenes */
+/* CARRUSEL DE IMÁGENES - ARREGLADO */
 .product-image-container {
     position: relative;
     height: 200px;
     overflow: hidden;
+    background-color: #f8f9fa; /* Fondo para cuando las imágenes no llenan el espacio */
 }
 
 .product-image-carousel {
     display: flex;
     transition: transform 0.5s ease;
     height: 100%;
+    width: 100%; /* Asegurar que ocupe el 100% */
 }
 
+/* IMÁGENES CON AJUSTE SIN DISTORSIÓN */
 .product-image-carousel img {
-    width: 100%;
+    width: 100%; /* Cada imagen ocupa el 100% del ancho del contenedor */
     height: 100%;
-    object-fit: cover;
-    flex-shrink: 0;
+    object-fit: contain; /* Cambiado de 'cover' a 'contain' para que no recorte */
+    flex-shrink: 0; /* Evita que las imágenes se reduzcan */
     cursor: pointer;
     transition: transform 0.3s ease;
+    background-color: #f8f9fa; /* Fondo para imágenes no cuadradas */
 }
 
+/* Mantener el hover effect */
 .product-image-carousel img:hover {
     transform: scale(1.02);
+}
+
+/* Para dispositivos móviles */
+@media (max-width: 768px) {
+    .product-image-container {
+        height: 180px; /* Altura ajustada para móviles */
+    }
+}
+
+@media (max-width: 480px) {
+    .product-image-container {
+        height: 160px; /* Altura aún más pequeña para móviles muy pequeños */
+    }
 }
 
 /* Controles del carrusel */
@@ -527,8 +545,9 @@ body {
 .cart-item-image {
     width: 80px;
     height: 80px;
-    object-fit: cover;
+    object-fit: contain; /* Cambiado de 'cover' a 'contain' */
     border-radius: var(--border-radius);
+    background-color: #f8f9fa;
 }
 
 .cart-item-details {
@@ -695,7 +714,8 @@ body {
 .viewer-image {
     width: 100%;
     max-height: 70vh;
-    object-fit: contain;
+    object-fit: contain; /* Asegurar que no se distorsione */
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 .image-viewer-container {
@@ -861,7 +881,8 @@ body {
     max-height: 150px;
     border-radius: 8px;
     border: 2px solid var(--light-gray);
-    object-fit: contain;
+    object-fit: contain; /* Asegurar que no se distorsione */
+    background-color: #f8f9fa;
 }
 
 /* Combinaciones de colores */
@@ -1107,9 +1128,10 @@ body {
 .preview-image {
     width: 80px;
     height: 80px;
-    object-fit: cover;
+    object-fit: contain; /* Asegurar que no se distorsione */
     border-radius: var(--border-radius);
     border: 2px solid var(--light-gray);
+    background-color: #f8f9fa;
 }
 
 .preview-image.loading {

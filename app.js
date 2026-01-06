@@ -659,7 +659,7 @@ function setupEventListeners() {
             }
         }
         
-        // Controles del carrusel
+        // Controles del carrusel - ARREGLADO
         if (e.target.closest('.carousel-control')) {
             const control = e.target.closest('.carousel-control');
             const productId = control.dataset.id;
@@ -667,7 +667,7 @@ function setupEventListeners() {
             navigateCarousel(productId, direction);
         }
         
-        // Puntos del carrusel
+        // Puntos del carrusel - ARREGLADO
         if (e.target.closest('.carousel-dot')) {
             const dot = e.target.closest('.carousel-dot');
             const productId = dot.dataset.id;
@@ -736,7 +736,7 @@ function setupEventListeners() {
     });
 }
 
-// Navegación del carrusel
+// Navegación del carrusel - ARREGLADA
 function navigateCarousel(productId, direction, specificIndex = null) {
     const productCard = document.querySelector(`.product-card[data-id="${productId}"]`);
     if (!productCard) return;
@@ -761,12 +761,16 @@ function navigateCarousel(productId, direction, specificIndex = null) {
         newIndex = (currentIndex + direction + images.length) % images.length;
     }
     
-    // Mover carrusel
-    carousel.style.transform = `translateX(-${(100 / images.length) * newIndex}%)`;
+    // Calcular el desplazamiento CORRECTO para el carrusel
+    // Cada imagen ocupa el 100% del contenedor, el carrusel tiene ancho del 100% * número de imágenes
+    const translateX = -(newIndex * 100); // Mover el porcentaje correcto
+    carousel.style.transform = `translateX(${translateX}%)`;
     
     // Actualizar puntos activos
     dots.forEach(dot => dot.classList.remove('active'));
-    dots[newIndex].classList.add('active');
+    if (dots[newIndex]) {
+        dots[newIndex].classList.add('active');
+    }
 }
 
 // Abrir visor de imágenes
@@ -1727,9 +1731,10 @@ function createProductCard(product, isAdmin) {
     const category = product.categoryId ? 
         appState.categories.find(c => c.id === product.categoryId) : null;
     
-    // Carrusel de imágenes
+    // CARRUSEL DE IMÁGENES - ARREGLADO
     let carouselHTML = '';
     if (product.images && product.images.length > 0) {
+        // El carrusel tiene un ancho del 100% * número de imágenes
         carouselHTML = `
             <div class="product-image-container">
                 <div class="product-image-carousel" style="width: ${100 * product.images.length}%;">
