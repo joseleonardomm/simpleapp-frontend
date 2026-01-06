@@ -12,6 +12,13 @@
     <script type="module" src="firebase-config.js"></script>
 </head>
 <body>
+    <!-- Botón de finanzas (sutil) -->
+    <div id="finance-button-container" class="finance-button-container hidden">
+        <button id="finance-btn" class="btn-finance">
+            <i class="fas fa-chart-line"></i> Finanzas
+        </button>
+    </div>
+
     <!-- Header con navegación -->
     <header class="header">
         <div class="container">
@@ -176,6 +183,10 @@
                             <div class="color-preview orange-scheme"></div>
                             <span>Naranja Energía</span>
                         </div>
+                        <div class="color-scheme-option" data-scheme="black-silver">
+                            <div class="color-preview black-silver-scheme"></div>
+                            <span>Negro Plateado</span>
+                        </div>
                     </div>
                     <input type="hidden" id="selected-color-scheme" value="whatsapp">
                 </div>
@@ -219,6 +230,14 @@
                     <div class="form-group">
                         <label for="product-description">Descripción</label>
                         <textarea id="product-description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="product-category">Categoría</label>
+                        <select id="product-category">
+                            <option value="">Sin categoría</option>
+                        </select>
+                        <p class="help-text">Selecciona una categoría existente o déjalo en blanco</p>
                     </div>
                     
                     <div class="form-group">
@@ -289,6 +308,53 @@
         </div>
     </div>
 
+    <!-- Modal para gestionar categorías -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Gestión de Categorías</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="new-category-name">Nueva categoría:</label>
+                    <div class="category-input-container">
+                        <input type="text" id="new-category-name" placeholder="Ej: Ropa, Electrónica, Hogar">
+                        <button id="add-category" class="btn btn-secondary btn-small">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
+                    </div>
+                </div>
+                <div id="categories-list" class="categories-list">
+                    <!-- Categorías se cargarán aquí -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary close-modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para ver imágenes en grande -->
+    <div id="image-viewer-modal" class="modal">
+        <div class="modal-content image-viewer-content">
+            <div class="modal-header">
+                <h2>Imagen del producto</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="image-viewer-container">
+                    <img id="viewer-main-image" src="" alt="Imagen del producto" class="viewer-image">
+                    <button id="viewer-prev" class="image-nav viewer-nav prev"><i class="fas fa-chevron-left"></i></button>
+                    <button id="viewer-next" class="image-nav viewer-nav next"><i class="fas fa-chevron-right"></i></button>
+                    <div class="image-counter-viewer">
+                        <span id="current-image-index">1</span> / <span id="total-images">1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Contenido principal -->
     <main class="container main-container">
         <!-- Panel de administración (oculto por defecto) -->
@@ -299,9 +365,14 @@
             </div>
             
             <div class="admin-actions">
-                <button id="add-product" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Agregar Producto
-                </button>
+                <div class="admin-actions-left">
+                    <button id="add-product" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Agregar Producto
+                    </button>
+                    <button id="manage-categories" class="btn btn-secondary">
+                        <i class="fas fa-tags"></i> Categorías
+                    </button>
+                </div>
                 <div class="store-info-panel">
                     <p><strong>Tu ID de tienda:</strong> <span id="store-id-display">cargando...</span></p>
                 </div>

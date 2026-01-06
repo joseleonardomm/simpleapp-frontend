@@ -8,7 +8,11 @@ let appState = {
     cart: [],
     storeId: null,
     isAdmin: false,
-    userEnabled: false  // Nuevo campo para verificar si el usuario está habilitado
+    userEnabled: false, // Nuevo campo para verificar si el usuario está habilitado
+    categories: [], // Nuevo array para categorías
+    currentCategoryFilter: null, // Filtro actual de categoría
+    viewerImages: [], // Imágenes para el visor
+    viewerIndex: 0 // Índice actual en el visor
 };
 
 // Referencias a elementos DOM
@@ -23,12 +27,16 @@ const elements = {
     checkoutWhatsapp: document.getElementById('checkout-whatsapp'),
     saveConfig: document.getElementById('save-config'),
     copyLink: document.getElementById('copy-link'),
+    financeBtn: document.getElementById('finance-btn'),
+    financeButtonContainer: document.getElementById('finance-button-container'),
     
     // Modales
     authModal: document.getElementById('auth-modal'),
     configModal: document.getElementById('config-modal'),
     productModal: document.getElementById('product-modal'),
     cartModal: document.getElementById('cart-modal'),
+    categoryModal: document.getElementById('category-modal'),
+    imageViewerModal: document.getElementById('image-viewer-modal'),
     
     // Paneles
     adminPanel: document.getElementById('admin-panel'),
@@ -69,6 +77,7 @@ const elements = {
     productName: document.getElementById('product-name'),
     productPrice: document.getElementById('product-price'),
     productDescription: document.getElementById('product-description'),
+    productCategory: document.getElementById('product-category'),
     
     // Nuevos elementos para logo y colores
     brandLogoUpload: document.getElementById('brand-logo-upload'),
@@ -76,6 +85,19 @@ const elements = {
     logoPreview: document.getElementById('logo-preview'),
     selectedColorScheme: document.getElementById('selected-color-scheme'),
     colorSchemeOptions: document.querySelectorAll('.color-scheme-option'),
+    
+    // Categorías
+    manageCategoriesBtn: document.getElementById('manage-categories'),
+    newCategoryName: document.getElementById('new-category-name'),
+    addCategoryBtn: document.getElementById('add-category'),
+    categoriesList: document.getElementById('categories-list'),
+    
+    // Visor de imágenes
+    viewerMainImage: document.getElementById('viewer-main-image'),
+    viewerPrev: document.getElementById('viewer-prev'),
+    viewerNext: document.getElementById('viewer-next'),
+    currentImageIndex: document.getElementById('current-image-index'),
+    totalImages: document.getElementById('total-images'),
     
     // Tabs y otros
     tabBtns: document.querySelectorAll('.tab-btn'),
@@ -237,6 +259,7 @@ async function loadUserStore(storeId) {
                 elements.configBtn.classList.remove('hidden');
                 elements.myStoreBtn.classList.remove('hidden');
                 elements.addProduct.classList.remove('hidden');
+                elements.manageCategoriesBtn.classList.remove('hidden');
             }
             
             // Cargar carrito
@@ -287,7 +310,8 @@ function applyColorScheme(scheme) {
         'color-scheme-green',
         'color-scheme-purple',
         'color-scheme-red',
-        'color-scheme-orange'
+        'color-scheme-orange',
+        'color-scheme-black-silver'
     );
     
     // Aplicar nueva clase de esquema
@@ -319,6 +343,8 @@ function showAccountDisabledMessage() {
     elements.catalogPanel.classList.remove('hidden');
     elements.configBtn.classList.add('hidden');
     elements.addProduct.classList.add('hidden');
+    elements.manageCategoriesBtn.classList.add('hidden');
+    elements.financeButtonContainer.classList.add('hidden');
     
     // Mostrar mensaje al usuario
     elements.catalogDescription.innerHTML = `
@@ -353,6 +379,7 @@ async function loadStoreForCustomer(storeId) {
             elements.authBtn.classList.add('hidden');
             elements.configBtn.classList.add('hidden');
             elements.myStoreBtn.classList.add('hidden');
+            elements.financeButtonContainer.classList.add('hidden');
             
             await loadStoreProducts(storeId);
             
@@ -395,6 +422,7 @@ async function createStoreForUser(storeId) {
             elements.configBtn.classList.remove('hidden');
             elements.myStoreBtn.classList.remove('hidden');
             elements.addProduct.classList.remove('hidden');
+            elements.manageCategoriesBtn.classList.remove('hidden');
         }
         
         // Cargar carrito
@@ -427,10 +455,70 @@ async function loadStoreProducts(storeId) {
         });
         
         console.log(`Productos cargados: ${appState.products.length}`);
+        
+        // Cargar categorías después de cargar productos
+        await loadCategories();
+        
         updateUI();
     } catch (error) {
         console.error("Error cargando productos:", error);
         showNotification("Error cargando productos", "error");
+    }
+}
+
+// Cargar categorías
+async function loadCategories() {
+    if (!appState.storeId) return;
+    
+    try {
+        const { db, collection, getDocs } = window.firebaseServices;
+        
+        const categoriesRef = collection(db, "stores", appState.storeId, "categories");
+        const querySnapshot = await getDocs(categoriesRef);
+        
+        appState.categories = [];
+        querySnapshot.forEach((doc) => {
+            appState.categories.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+        
+        // Actualizar selector de categorías en formulario de producto
+        updateCategorySelect();
+        
+        // Actualizar lista de categorías en el modal si está abierto
+        if (elements.categoryModal && elements.categoryModal.classList.contains('active')) {
+            renderCategoriesList();
+        }
+        
+        console.log(`Categorías cargadas: ${appState.categories.length}`);
+    } catch (error) {
+        console.error("Error cargando categorías:", error);
+    }
+}
+
+// Actualizar selector de categorías
+function updateCategorySelect() {
+    if (!elements.productCategory) return;
+    
+    // Guardar valor actual
+    const currentValue = elements.productCategory.value;
+    
+    // Limpiar opciones excepto la primera
+    elements.productCategory.innerHTML = '<option value="">Sin categoría</option>';
+    
+    // Agregar categorías
+    appState.categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.id;
+        option.textContent = category.name;
+        elements.productCategory.appendChild(option);
+    });
+    
+    // Restaurar valor si existe
+    if (currentValue) {
+        elements.productCategory.value = currentValue;
     }
 }
 
@@ -455,6 +543,17 @@ function setupEventListeners() {
     if (elements.checkoutWhatsapp) elements.checkoutWhatsapp.addEventListener('click', checkoutViaWhatsApp);
     if (elements.saveConfig) elements.saveConfig.addEventListener('click', saveStoreConfig);
     if (elements.copyLink) elements.copyLink.addEventListener('click', copyStoreLink);
+    if (elements.financeBtn) elements.financeBtn.addEventListener('click', () => {
+        window.location.href = 'finanzas.html';
+    });
+    
+    // Gestión de categorías
+    if (elements.manageCategoriesBtn) elements.manageCategoriesBtn.addEventListener('click', openCategoryModal);
+    if (elements.addCategoryBtn) elements.addCategoryBtn.addEventListener('click', addCategory);
+    
+    // Visor de imágenes
+    if (elements.viewerPrev) elements.viewerPrev.addEventListener('click', showPreviousImage);
+    if (elements.viewerNext) elements.viewerNext.addEventListener('click', showNextImage);
     
     // Formularios
     if (elements.loginForm) elements.loginForm.addEventListener('submit', handleLogin);
@@ -559,6 +658,74 @@ function setupEventListeners() {
                 imageInput.remove();
             }
         }
+        
+        // Controles del carrusel
+        if (e.target.closest('.carousel-control')) {
+            const control = e.target.closest('.carousel-control');
+            const productId = control.dataset.id;
+            const direction = control.classList.contains('next') ? 1 : -1;
+            navigateCarousel(productId, direction);
+        }
+        
+        // Puntos del carrusel
+        if (e.target.closest('.carousel-dot')) {
+            const dot = e.target.closest('.carousel-dot');
+            const productId = dot.dataset.id;
+            const index = parseInt(dot.dataset.index);
+            navigateCarousel(productId, 0, index);
+        }
+        
+        // Imágenes clickables para visor
+        if (e.target.closest('.product-image-carousel img')) {
+            const img = e.target.closest('.product-image-carousel img');
+            const productCard = img.closest('.product-card');
+            const productId = productCard.dataset.id;
+            const product = appState.products.find(p => p.id === productId);
+            
+            if (product && product.images) {
+                // Encontrar índice de la imagen clickeada
+                const imgIndex = Array.from(img.parentElement.children).indexOf(img);
+                openImageViewer(product.images, imgIndex);
+            }
+        }
+        
+        // Filtros de categoría
+        if (e.target.closest('.category-filter')) {
+            const filterBtn = e.target.closest('.category-filter');
+            const categoryId = filterBtn.dataset.category;
+            
+            // Actualizar filtro activo
+            document.querySelectorAll('.category-filter').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (categoryId === appState.currentCategoryFilter) {
+                // Si ya está activo, desactivar
+                appState.currentCategoryFilter = null;
+            } else {
+                // Activar nuevo filtro
+                filterBtn.classList.add('active');
+                appState.currentCategoryFilter = categoryId;
+            }
+            
+            // Renderizar productos filtrados
+            renderCatalogProducts();
+        }
+        
+        // Editar categoría
+        if (e.target.closest('.edit-category')) {
+            const categoryId = e.target.closest('.edit-category').dataset.id;
+            editCategory(categoryId);
+        }
+        
+        // Eliminar categoría
+        if (e.target.closest('.delete-category')) {
+            const btn = e.target.closest('.delete-category');
+            if (!btn.disabled) {
+                const categoryId = btn.dataset.id;
+                deleteCategory(categoryId);
+            }
+        }
     });
     
     // Previsualización de imágenes en formulario de producto
@@ -567,6 +734,70 @@ function setupEventListeners() {
             previewImage(e.target);
         }
     });
+}
+
+// Navegación del carrusel
+function navigateCarousel(productId, direction, specificIndex = null) {
+    const productCard = document.querySelector(`.product-card[data-id="${productId}"]`);
+    if (!productCard) return;
+    
+    const carousel = productCard.querySelector('.product-image-carousel');
+    const dots = productCard.querySelectorAll('.carousel-dot');
+    const images = carousel.querySelectorAll('img');
+    
+    if (images.length <= 1) return;
+    
+    let currentIndex = 0;
+    dots.forEach((dot, index) => {
+        if (dot.classList.contains('active')) {
+            currentIndex = index;
+        }
+    });
+    
+    let newIndex;
+    if (specificIndex !== null) {
+        newIndex = specificIndex;
+    } else {
+        newIndex = (currentIndex + direction + images.length) % images.length;
+    }
+    
+    // Mover carrusel
+    carousel.style.transform = `translateX(-${(100 / images.length) * newIndex}%)`;
+    
+    // Actualizar puntos activos
+    dots.forEach(dot => dot.classList.remove('active'));
+    dots[newIndex].classList.add('active');
+}
+
+// Abrir visor de imágenes
+function openImageViewer(images, startIndex = 0) {
+    if (!images || images.length === 0) return;
+    
+    appState.viewerImages = images;
+    appState.viewerIndex = startIndex;
+    
+    elements.viewerMainImage.src = images[startIndex];
+    elements.currentImageIndex.textContent = startIndex + 1;
+    elements.totalImages.textContent = images.length;
+    
+    openModal(elements.imageViewerModal);
+}
+
+// Navegar entre imágenes en el visor
+function showPreviousImage() {
+    if (appState.viewerImages.length <= 1) return;
+    
+    appState.viewerIndex = (appState.viewerIndex - 1 + appState.viewerImages.length) % appState.viewerImages.length;
+    elements.viewerMainImage.src = appState.viewerImages[appState.viewerIndex];
+    elements.currentImageIndex.textContent = appState.viewerIndex + 1;
+}
+
+function showNextImage() {
+    if (appState.viewerImages.length <= 1) return;
+    
+    appState.viewerIndex = (appState.viewerIndex + 1) % appState.viewerImages.length;
+    elements.viewerMainImage.src = appState.viewerImages[appState.viewerIndex];
+    elements.currentImageIndex.textContent = appState.viewerIndex + 1;
 }
 
 // Previsualizar logo de marca
@@ -731,6 +962,7 @@ async function handleProductSubmit(e) {
     const name = elements.productName.value.trim();
     const price = parseFloat(elements.productPrice.value);
     const description = elements.productDescription.value.trim();
+    const categoryId = elements.productCategory.value || null;
     
     // Validaciones
     if (!name || !price || price <= 0 || isNaN(price)) {
@@ -785,6 +1017,7 @@ async function handleProductSubmit(e) {
             price,
             description,
             images: imageUrls,
+            categoryId: categoryId,
             updatedAt: window.firebaseServices.serverTimestamp()
         };
         
@@ -977,10 +1210,18 @@ function updateAuthUI() {
         elements.authBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Cerrar Sesión';
         elements.authBtn.onclick = handleLogout;
         elements.myStoreBtn.classList.remove('hidden');
+        
+        // Mostrar botón de finanzas solo si el usuario está habilitado
+        if (appState.userEnabled) {
+            elements.financeButtonContainer.classList.remove('hidden');
+        } else {
+            elements.financeButtonContainer.classList.add('hidden');
+        }
     } else {
         elements.authBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar Sesión';
         elements.authBtn.onclick = openAuthModal;
         elements.myStoreBtn.classList.add('hidden');
+        elements.financeButtonContainer.classList.add('hidden');
     }
 }
 
@@ -993,6 +1234,7 @@ async function handleLogout() {
         appState.currentUser = null;
         appState.currentStore = null;
         appState.products = [];
+        appState.categories = [];
         appState.userEnabled = false;
         
         // Restablecer UI
@@ -1001,6 +1243,8 @@ async function handleLogout() {
         elements.configBtn.classList.add('hidden');
         elements.myStoreBtn.classList.add('hidden');
         elements.addProduct.classList.add('hidden');
+        elements.manageCategoriesBtn.classList.add('hidden');
+        elements.financeButtonContainer.classList.add('hidden');
         elements.storeName.textContent = "Cargando tienda...";
         elements.storeTagline.textContent = "Catálogo Digital";
         elements.catalogDescription.textContent = "Inicia sesión para administrar tu tienda";
@@ -1082,6 +1326,147 @@ function openConfigModal() {
     openModal(elements.configModal);
 }
 
+// Abrir modal de categorías
+function openCategoryModal() {
+    if (!appState.userEnabled) {
+        showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
+        return;
+    }
+    
+    renderCategoriesList();
+    openModal(elements.categoryModal);
+}
+
+// Renderizar lista de categorías
+function renderCategoriesList() {
+    if (!elements.categoriesList) return;
+    
+    if (appState.categories.length === 0) {
+        elements.categoriesList.innerHTML = `
+            <div class="empty-categories">
+                <i class="fas fa-tags"></i>
+                <h3>No hay categorías</h3>
+                <p>Agrega tu primera categoría</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    // Contar productos por categoría
+    const categoryCounts = {};
+    appState.products.forEach(product => {
+        if (product.categoryId) {
+            categoryCounts[product.categoryId] = (categoryCounts[product.categoryId] || 0) + 1;
+        }
+    });
+    
+    appState.categories.forEach(category => {
+        const productCount = categoryCounts[category.id] || 0;
+        
+        html += `
+            <div class="category-item" data-id="${category.id}">
+                <div class="category-name">
+                    ${category.name}
+                    ${productCount > 0 ? `<span class="category-count">${productCount}</span>` : ''}
+                </div>
+                <div class="category-actions">
+                    <button class="btn btn-secondary btn-small edit-category" data-id="${category.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-small delete-category" data-id="${category.id}" 
+                            ${productCount > 0 ? 'disabled title="No se puede eliminar porque tiene productos"' : ''}>
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    elements.categoriesList.innerHTML = html;
+}
+
+// Agregar categoría
+async function addCategory() {
+    const name = elements.newCategoryName.value.trim();
+    
+    if (!name) {
+        showNotification("Ingresa un nombre para la categoría", "error");
+        return;
+    }
+    
+    try {
+        const { db, collection, addDoc, serverTimestamp } = window.firebaseServices;
+        
+        const categoryData = {
+            name: name,
+            storeId: appState.storeId,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+        
+        await addDoc(collection(db, "stores", appState.storeId, "categories"), categoryData);
+        
+        // Limpiar campo
+        elements.newCategoryName.value = '';
+        
+        // Recargar categorías
+        await loadCategories();
+        
+        showNotification("Categoría agregada", "success");
+    } catch (error) {
+        console.error("Error agregando categoría:", error);
+        showNotification("Error agregando categoría", "error");
+    }
+}
+
+// Editar categoría
+async function editCategory(categoryId) {
+    const category = appState.categories.find(c => c.id === categoryId);
+    if (!category) return;
+    
+    const newName = prompt("Nuevo nombre para la categoría:", category.name);
+    
+    if (newName && newName.trim() !== category.name) {
+        try {
+            const { db, doc, updateDoc, serverTimestamp } = window.firebaseServices;
+            
+            await updateDoc(doc(db, "stores", appState.storeId, "categories", categoryId), {
+                name: newName.trim(),
+                updatedAt: serverTimestamp()
+            });
+            
+            // Recargar categorías
+            await loadCategories();
+            
+            showNotification("Categoría actualizada", "success");
+        } catch (error) {
+            console.error("Error actualizando categoría:", error);
+            showNotification("Error actualizando categoría", "error");
+        }
+    }
+}
+
+// Eliminar categoría
+async function deleteCategory(categoryId) {
+    if (!confirm("¿Estás seguro de eliminar esta categoría?")) return;
+    
+    try {
+        const { db, doc, deleteDoc } = window.firebaseServices;
+        
+        await deleteDoc(doc(db, "stores", appState.storeId, "categories", categoryId));
+        
+        // Recargar categorías
+        await loadCategories();
+        
+        showNotification("Categoría eliminada", "success");
+    } catch (error) {
+        console.error("Error eliminando categoría:", error);
+        showNotification("Error eliminando categoría", "error");
+    }
+}
+
 // Abrir modal para agregar producto
 function openAddProductModal() {
     // Verificar que el usuario esté habilitado
@@ -1092,6 +1477,7 @@ function openAddProductModal() {
     
     elements.productForm.reset();
     elements.productId.value = "";
+    elements.productCategory.value = "";
     document.getElementById('modal-title').textContent = "Agregar Producto";
     
     // Resetear inputs de imagen
@@ -1127,6 +1513,7 @@ function openEditProductModal(productId) {
     elements.productName.value = product.name;
     elements.productPrice.value = product.price;
     elements.productDescription.value = product.description || "";
+    elements.productCategory.value = product.categoryId || "";
     document.getElementById('modal-title').textContent = "Editar Producto";
     
     // Configurar inputs de imagen
@@ -1266,12 +1653,20 @@ function renderAdminProducts() {
 function renderCatalogProducts() {
     const container = elements.catalogProducts;
     
-    if (appState.products.length === 0) {
+    // Filtrar productos por categoría si hay filtro activo
+    let filteredProducts = appState.products;
+    if (appState.currentCategoryFilter) {
+        filteredProducts = appState.products.filter(
+            product => product.categoryId === appState.currentCategoryFilter
+        );
+    }
+    
+    if (filteredProducts.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-box-open"></i>
-                <h3>Catálogo vacío</h3>
-                <p>No hay productos disponibles en este momento</p>
+                <h3>${appState.currentCategoryFilter ? 'No hay productos en esta categoría' : 'Catálogo vacío'}</h3>
+                <p>${appState.currentCategoryFilter ? 'Prueba con otra categoría' : 'No hay productos disponibles en este momento'}</p>
             </div>
         `;
         return;
@@ -1279,7 +1674,39 @@ function renderCatalogProducts() {
     
     container.innerHTML = '';
     
-    appState.products.forEach(product => {
+    // Renderizar filtros de categoría (solo si hay categorías)
+    if (appState.categories.length > 0) {
+        const filtersContainer = document.createElement('div');
+        filtersContainer.className = 'category-filters';
+        
+        // Botón "Todos"
+        const allBtn = document.createElement('button');
+        allBtn.className = `category-filter ${!appState.currentCategoryFilter ? 'active' : ''}`;
+        allBtn.textContent = 'Todos';
+        allBtn.addEventListener('click', () => {
+            appState.currentCategoryFilter = null;
+            document.querySelectorAll('.category-filter').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            allBtn.classList.add('active');
+            renderCatalogProducts();
+        });
+        filtersContainer.appendChild(allBtn);
+        
+        // Botones por categoría
+        appState.categories.forEach(category => {
+            const btn = document.createElement('button');
+            btn.className = `category-filter ${appState.currentCategoryFilter === category.id ? 'active' : ''}`;
+            btn.dataset.category = category.id;
+            btn.textContent = category.name;
+            filtersContainer.appendChild(btn);
+        });
+        
+        container.appendChild(filtersContainer);
+    }
+    
+    // Renderizar productos
+    filteredProducts.forEach(product => {
         const productCard = createProductCard(product, false);
         container.appendChild(productCard);
     });
@@ -1296,10 +1723,51 @@ function createProductCard(product, isAdmin) {
     const inCart = cartItem ? true : false;
     const cartQuantity = cartItem ? cartItem.quantity : 0;
     
-    // Imagen principal
-    const mainImage = product.images && product.images.length > 0 
-        ? product.images[0] 
-        : 'https://via.placeholder.com/400x300?text=Imagen+no+disponible';
+    // Obtener nombre de categoría
+    const category = product.categoryId ? 
+        appState.categories.find(c => c.id === product.categoryId) : null;
+    
+    // Carrusel de imágenes
+    let carouselHTML = '';
+    if (product.images && product.images.length > 0) {
+        carouselHTML = `
+            <div class="product-image-container">
+                <div class="product-image-carousel" style="width: ${100 * product.images.length}%;">
+                    ${product.images.map((img, index) => `
+                        <img src="${img}" alt="${product.name} - Imagen ${index + 1}" 
+                             class="product-image" 
+                             onerror="this.src='https://via.placeholder.com/400x300?text=Imagen+no+disponible'"
+                             data-index="${index}">
+                    `).join('')}
+                </div>
+                ${product.images.length > 1 ? `
+                    <div class="carousel-controls">
+                        <button class="carousel-control prev" data-id="${product.id}">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="carousel-control next" data-id="${product.id}">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div class="carousel-dots">
+                        ${product.images.map((_, index) => `
+                            <button class="carousel-dot ${index === 0 ? 'active' : ''}" 
+                                    data-id="${product.id}" data-index="${index}"></button>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    } else {
+        carouselHTML = `
+            <div class="product-image-container">
+                <div class="no-image-placeholder">
+                    <i class="fas fa-image"></i>
+                    <span>Sin imagen</span>
+                </div>
+            </div>
+        `;
+    }
     
     let actionsHTML = '';
     
@@ -1346,15 +1814,16 @@ function createProductCard(product, isAdmin) {
         `;
     }
     
+    // Agregar badge de categoría si existe
+    const categoryBadge = category ? 
+        `<span class="product-category-badge">${category.name}</span>` : '';
+    
     card.innerHTML = `
-        <div class="product-image-container">
-            <img src="${mainImage}" alt="${product.name}" class="product-image" 
-                 onerror="this.src='https://via.placeholder.com/400x300?text=Imagen+no+disponible'">
-        </div>
-        
+        ${carouselHTML}
         <div class="product-info">
             <h3 class="product-name">${product.name}</h3>
             <div class="product-price">$${product.price.toFixed(2)}</div>
+            ${categoryBadge}
             <p class="product-description">${product.description || 'Sin descripción'}</p>
             ${actionsHTML}
         </div>
