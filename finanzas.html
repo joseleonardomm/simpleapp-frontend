@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanzas Personales | Control de Gastos e Ingresos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="finanzas.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                <h1>Finanzas Personales</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary" id="addTransactionBtn">
+                    <i class="fas fa-plus-circle"></i> Nueva Transacción
+                </button>
+                <button class="btn btn-success" id="addPercentageBtn">
+                    <i class="fas fa-chart-pie"></i> Configurar Porcentajes
+                </button>
+            </div>
+        </header>
+
+        <div class="summary-cards">
+            <div class="card income">
+                <div class="card-title">
+                    <i class="fas fa-arrow-down"></i>
+                    <h2>Total Ingresos</h2>
+                </div>
+                <div class="card-value" id="totalIncome">$0.00</div>
+                <div class="card-subtitle">Este mes</div>
+            </div>
+            
+            <div class="card expense">
+                <div class="card-title">
+                    <i class="fas fa-arrow-up"></i>
+                    <h2>Total Gastos</h2>
+                </div>
+                <div class="card-value" id="totalExpense">$0.00</div>
+                <div class="card-subtitle">Este mes</div>
+            </div>
+            
+            <div class="card balance">
+                <div class="card-title">
+                    <i class="fas fa-wallet"></i>
+                    <h2>Saldo Total</h2>
+                </div>
+                <div class="card-value" id="totalBalance">$0.00</div>
+                <div class="card-subtitle">Saldo disponible</div>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="transactions">
+                <div class="section-header">
+                    <h2 class="section-title">Transacciones Recientes</h2>
+                    <div class="transaction-filters">
+                        <select id="filterType">
+                            <option value="all">Todas</option>
+                            <option value="income">Ingresos</option>
+                            <option value="expense">Gastos</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="transactions-list">
+                    <table id="transactionsTable">
+                        <thead>
+                            <tr>
+                                <th>Descripción</th>
+                                <th>Tipo</th>
+                                <th>Fecha</th>
+                                <th>Monto</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsBody">
+                            <!-- Las transacciones se cargarán aquí -->
+                        </tbody>
+                    </table>
+                    <div id="emptyTransactions" class="empty-state">
+                        <i class="fas fa-exchange-alt"></i>
+                        <h3>No hay transacciones registradas</h3>
+                        <p>Agrega tu primer ingreso o gasto para comenzar</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="section-header">
+                    <h2 class="section-title">Distribución de Porcentajes</h2>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="percentage-distribution">
+            <div class="section-header">
+                <h2 class="section-title">Distribución de Fondos por Categoría</h2>
+                <div class="percentage-info">
+                    <span id="remainingPercentage">100% disponible</span>
+                </div>
+            </div>
+            <div class="percentage-list" id="percentageList">
+                <!-- Los porcentajes y saldos disponibles se cargarán aquí -->
+            </div>
+        </div>
+
+        <div class="month-summary">
+            <div class="section-header">
+                <h2 class="section-title">Resumen Mensual</h2>
+                <div class="month-selector">
+                    <select id="monthSelect">
+                        <!-- Las opciones se cargarán con JS -->
+                    </select>
+                    <select id="yearSelect">
+                        <!-- Las opciones se cargarán con JS -->
+                    </select>
+                </div>
+            </div>
+            <div class="summary-content" id="monthSummary">
+                <!-- El resumen se cargará aquí -->
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 Finanzas Personales | Aplicación de control de gastos e ingresos</p>
+            <p>Esta aplicación usa almacenamiento local del navegador</p>
+        </footer>
+    </div>
+
+    <!-- Modal para agregar/editar transacciones -->
+    <div class="modal" id="transactionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Nueva Transacción</h3>
+                <button class="close-btn" id="closeTransactionModal">&times;</button>
+            </div>
+            <form id="transactionForm">
+                <input type="hidden" id="transactionId">
+                
+                <div class="form-group">
+                    <label for="description">Descripción</label>
+                    <input type="text" id="description" required placeholder="Ej: Salario, Comida, Transporte...">
+                </div>
+                
+                <div class="form-group category-field" id="categoryField">
+                    <label for="category">Categoría</label>
+                    <select id="category">
+                        <option value="">Seleccionar categoría</option>
+                        <!-- Las categorías se cargarán con JS -->
+                    </select>
+                    <div id="categoryWarning" class="warning-text" style="display: none;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="amount">Monto</label>
+                    <input type="number" id="amount" required min="0.01" step="0.01" placeholder="0.00">
+                </div>
+                
+                <div class="form-group">
+                    <label for="date">Fecha</label>
+                    <input type="date" id="date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Tipo de transacción</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="typeIncome" name="type" value="income" checked>
+                            <label for="typeIncome">Ingreso</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="typeExpense" name="type" value="expense">
+                            <label for="typeExpense">Gasto</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" id="cancelTransaction">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Transacción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para configurar porcentajes -->
+    <div class="modal" id="percentageModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Configurar Porcentajes</h3>
+                <button class="close-btn" id="closePercentageModal">&times;</button>
+            </div>
+            <form id="percentageForm">
+                <div class="form-group">
+                    <p>Define cómo quieres distribuir tu dinero. La suma de todos los porcentajes debe ser 100%.</p>
+                    <p><strong>Nota:</strong> Los nuevos porcentajes solo se aplicarán a futuros ingresos.</p>
+                </div>
+                
+                <div id="percentageInputs">
+                    <!-- Los inputs para porcentajes se cargarán aquí -->
+                </div>
+                
+                <div class="form-group">
+                    <button type="button" class="btn btn-success" id="addPercentageField">
+                        <i class="fas fa-plus"></i> Agregar Categoría
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <div class="percentage-total">
+                        <strong>Total: </strong><span id="percentageTotal">0%</span>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" id="cancelPercentage">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Distribución</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
