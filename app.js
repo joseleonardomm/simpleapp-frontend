@@ -12,7 +12,8 @@ let appState = {
     categories: [],
     currentCategoryFilter: null,
     viewerImages: [],
-    viewerIndex: 0
+    viewerIndex: 0,
+    editingProductImages: [] // Para manejar imágenes durante edición
 };
 
 // Referencias a elementos DOM
@@ -525,8 +526,11 @@ function setupEventListeners() {
         });
     });
     
+    // Botón para agregar nueva imagen
     const addImageBtn = document.getElementById('add-image');
-    if (addImageBtn) addImageBtn.addEventListener('click', addImageInput);
+    if (addImageBtn) {
+        addImageBtn.addEventListener('click', addNewImageRow);
+    }
     
     // Event delegation para botones dinámicos
     document.addEventListener('click', function(e) {
@@ -563,13 +567,6 @@ function setupEventListeners() {
         if (e.target.closest('.cart-item-remove')) {
             const productId = e.target.closest('.cart-item-remove').dataset.id;
             removeFromCart(productId);
-        }
-        
-        if (e.target.closest('.btn-remove-image')) {
-            const imageInput = e.target.closest('.image-input');
-            if (imageInput) {
-                imageInput.remove();
-            }
         }
         
         // Controles del carrusel - ARREGLADO
@@ -634,11 +631,317 @@ function setupEventListeners() {
         }
     });
     
+    // Event delegation para imágenes dentro del modal de producto
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('image-file')) {
-            previewImage(e.target);
+            const row = e.target.closest('.image-input-row');
+            if (row) {
+                handleImageFileSelect(e, row);
+            }
         }
     });
+}
+
+// Función para renderizar inputs de imágenes con controles de portada
+function renderImageInputs(images = [], isNew = false) {
+    const container = document.getElementById('image-inputs-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (images.length === 0) {
+        // Si no hay imágenes, crear un input vacío
+        const inputRow = createImageInputRow(null, 0, true);
+        container.appendChild(inputRow);
+    } else {
+        // Renderizar cada imagen con sus controles
+        images.forEach((image, index) => {
+            const inputRow = createImageInputRow(image, index, index === 0);
+            container.appendChild(inputRow);
+        });
+    }
+    
+    // Si estamos agregando un nuevo producto, agregar un input extra vacío
+    if (isNew && images.length < 5) {
+        const emptyInputRow = createImageInputRow(null, images.length, false);
+        container.appendChild(emptyInputRow);
+    }
+}
+
+// Función para crear una fila de input de imagen
+function createImageInputRow(imageData, index, isFeatured = false) {
+    const row = document.createElement('div');
+    row.className = 'image-input-row';
+    row.dataset.index = index;
+    
+    let html = `
+        <div class="image-input-preview">
+    `;
+    
+    if (imageData) {
+        // Si es una imagen existente (URL string) o un nuevo objeto File
+        if (typeof imageData === 'string') {
+            html += `<img src="${imageData}" alt="Imagen ${index + 1}" class="image-preview">`;
+            html += `<input type="hidden" class="existing-image-input" value="${imageData}">`;
+        } else if (imageData instanceof File) {
+            const previewUrl = URL.createObjectURL(imageData);
+            html += `<img src="${previewUrl}" alt="Nueva imagen ${index + 1}" class="image-preview">`;
+        }
+    } else {
+        html += `<div class="no-preview">Sin imagen</div>`;
+    }
+    
+    html += `</div>`;
+    
+    html += `
+        <div class="image-input-controls">
+            <div class="image-featured">
+                <label class="featured-checkbox">
+                    <input type="radio" name="featured-image" value="${index}" 
+                           ${isFeatured ? 'checked' : ''} ${imageData ? '' : 'disabled'}>
+                    <span class="featured-label">Portada</span>
+                    ${isFeatured ? '<span class="featured-badge">PRINCIPAL</span>' : ''}
+                </label>
+            </div>
+            
+            <div class="image-actions">
+                <label class="btn-file-upload">
+                    <i class="fas fa-camera"></i> ${imageData ? 'Cambiar' : 'Seleccionar'}
+                    <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg" 
+                           style="display: none;" ${index === 0 && !imageData ? 'required' : ''}>
+                </label>
+                
+                <button type="button" class="btn-remove-image" ${!imageData ? 'disabled' : ''}>
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+                
+                <button type="button" class="btn-move-up" ${index === 0 ? 'disabled' : ''}>
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                
+                <button type="button" class="btn-move-down" 
+                        ${index === 0 ? 'disabled' : ''}>
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+            </div>
+            
+            <div class="image-info">
+                ${imageData ? 
+                    `<span class="image-name">${typeof imageData === 'string' ? 'Imagen existente' : imageData.name}</span>` : 
+                    '<span class="image-name">Nueva imagen</span>'
+                }
+                <span class="image-size">
+                    ${imageData && imageData instanceof File ? 
+                        `(${(imageData.size / 1024).toFixed(1)} KB)` : 
+                        ''}
+                </span>
+            </div>
+        </div>
+    `;
+    
+    row.innerHTML = html;
+    
+    // Agregar event listeners
+    const fileInput = row.querySelector('.image-file');
+    const removeBtn = row.querySelector('.btn-remove-image');
+    const moveUpBtn = row.querySelector('.btn-move-up');
+    const moveDownBtn = row.querySelector('.btn-move-down');
+    const featuredRadio = row.querySelector('input[name="featured-image"]');
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            handleImageFileSelect(e, row);
+        });
+    }
+    
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function() {
+            removeImageRow(row);
+        });
+    }
+    
+    if (moveUpBtn) {
+        moveUpBtn.addEventListener('click', function() {
+            moveImageRow(row, -1);
+        });
+    }
+    
+    if (moveDownBtn) {
+        moveDownBtn.addEventListener('click', function() {
+            moveImageRow(row, 1);
+        });
+    }
+    
+    if (featuredRadio) {
+        featuredRadio.addEventListener('change', function() {
+            if (this.checked) {
+                updateFeaturedBadge(row, true);
+                // Quitar badge de otras filas
+                document.querySelectorAll('.image-input-row').forEach(otherRow => {
+                    if (otherRow !== row) {
+                        updateFeaturedBadge(otherRow, false);
+                    }
+                });
+            }
+        });
+    }
+    
+    return row;
+}
+
+// Manejar selección de archivo
+function handleImageFileSelect(event, row) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+        showNotification("La imagen es demasiado grande (máximo 2MB)", "error");
+        event.target.value = '';
+        return;
+    }
+    
+    const previewContainer = row.querySelector('.image-input-preview');
+    const imageInfo = row.querySelector('.image-info');
+    const featuredRadio = row.querySelector('input[name="featured-image"]');
+    const removeBtn = row.querySelector('.btn-remove-image');
+    
+    // Crear preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        previewContainer.innerHTML = `
+            <img src="${e.target.result}" alt="${file.name}" class="image-preview">
+        `;
+        
+        // Actualizar info
+        imageInfo.innerHTML = `
+            <span class="image-name">${file.name}</span>
+            <span class="image-size">(${(file.size / 1024).toFixed(1)} KB)</span>
+        `;
+        
+        // Habilitar controles
+        if (featuredRadio) featuredRadio.disabled = false;
+        if (removeBtn) removeBtn.disabled = false;
+        
+        // Habilitar botones de movimiento
+        const moveUpBtn = row.querySelector('.btn-move-up');
+        const moveDownBtn = row.querySelector('.btn-move-down');
+        if (moveUpBtn && row.previousElementSibling) {
+            moveUpBtn.disabled = false;
+        }
+        if (moveDownBtn && row.nextElementSibling) {
+            moveDownBtn.disabled = false;
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+// Eliminar fila de imagen
+function removeImageRow(row) {
+    if (!confirm("¿Estás seguro de eliminar esta imagen?")) return;
+    
+    const container = document.getElementById('image-inputs-container');
+    const rows = container.querySelectorAll('.image-input-row');
+    
+    if (rows.length <= 1) {
+        showNotification("Debe haber al menos una imagen", "error");
+        return;
+    }
+    
+    row.remove();
+    
+    // Renumerar índices y actualizar controles
+    updateImageRows();
+}
+
+// Mover fila de imagen
+function moveImageRow(row, direction) {
+    const container = document.getElementById('image-inputs-container');
+    
+    if (direction === -1 && row.previousElementSibling) {
+        container.insertBefore(row, row.previousElementSibling);
+    } else if (direction === 1 && row.nextElementSibling) {
+        container.insertBefore(row.nextElementSibling, row);
+    }
+    
+    updateImageRows();
+}
+
+// Actualizar todas las filas de imágenes
+function updateImageRows() {
+    const container = document.getElementById('image-inputs-container');
+    if (!container) return;
+    
+    const rows = container.querySelectorAll('.image-input-row');
+    
+    rows.forEach((row, index) => {
+        row.dataset.index = index;
+        
+        // Actualizar radio buttons de portada
+        const radio = row.querySelector('input[name="featured-image"]');
+        if (radio) {
+            radio.value = index;
+            
+            // Si esta es la primera fila y no hay portada seleccionada, marcarla como portada
+            if (index === 0 && !document.querySelector('input[name="featured-image"]:checked')) {
+                radio.checked = true;
+                updateFeaturedBadge(row, true);
+            }
+        }
+        
+        // Actualizar botones de movimiento
+        const moveUpBtn = row.querySelector('.btn-move-up');
+        const moveDownBtn = row.querySelector('.btn-move-down');
+        
+        if (moveUpBtn) {
+            moveUpBtn.disabled = index === 0;
+        }
+        
+        if (moveDownBtn) {
+            moveDownBtn.disabled = index === rows.length - 1;
+        }
+        
+        // Actualizar badge de portada
+        const isFeatured = row.querySelector('input[name="featured-image"]:checked') !== null;
+        updateFeaturedBadge(row, isFeatured);
+    });
+}
+
+// Actualizar badge de portada
+function updateFeaturedBadge(row, isFeatured) {
+    const badge = row.querySelector('.featured-badge');
+    const label = row.querySelector('.featured-label');
+    
+    if (isFeatured) {
+        if (!badge && label) {
+            const badgeElement = document.createElement('span');
+            badgeElement.className = 'featured-badge';
+            badgeElement.textContent = 'PRINCIPAL';
+            label.parentNode.insertBefore(badgeElement, label.nextSibling);
+        }
+    } else {
+        if (badge) {
+            badge.remove();
+        }
+    }
+}
+
+// Nueva función para agregar fila de imagen
+function addNewImageRow() {
+    const container = document.getElementById('image-inputs-container');
+    if (!container) return;
+    
+    const rows = container.querySelectorAll('.image-input-row');
+    
+    if (rows.length >= 5) {
+        showNotification("Máximo 5 imágenes por producto", "error");
+        return;
+    }
+    
+    const newIndex = rows.length;
+    const newRow = createImageInputRow(null, newIndex, false);
+    container.appendChild(newRow);
+    
+    updateImageRows();
 }
 
 // Navegación del carrusel - ARREGLADO COMPLETAMENTE
@@ -851,7 +1154,7 @@ async function handleRegister(e) {
     }
 }
 
-// Manejar producto
+// Modificar la función handleProductSubmit para manejar imágenes correctamente
 async function handleProductSubmit(e) {
     e.preventDefault();
     
@@ -871,24 +1174,34 @@ async function handleProductSubmit(e) {
         return;
     }
     
-    const imageInputs = document.querySelectorAll('.image-file');
-    const files = Array.from(imageInputs)
-        .map(input => input.files[0])
-        .filter(file => file);
+    // Obtener imágenes del formulario
+    const imageRows = document.querySelectorAll('.image-input-row');
+    const imageFiles = [];
+    const existingImages = [];
     
-    if (files.length === 0) {
-        const existingImages = document.querySelectorAll('.existing-image');
-        if (existingImages.length === 0) {
-            showNotification("Debes agregar al menos una imagen", "error");
-            return;
+    // Recopilar imágenes existentes y archivos nuevos
+    imageRows.forEach(row => {
+        const existingImageInput = row.querySelector('.existing-image-input');
+        const fileInput = row.querySelector('.image-file');
+        
+        if (existingImageInput && existingImageInput.value) {
+            existingImages.push(existingImageInput.value);
+        } else if (fileInput && fileInput.files[0]) {
+            imageFiles.push(fileInput.files[0]);
         }
+    });
+    
+    if (existingImages.length === 0 && imageFiles.length === 0) {
+        showNotification("Debes agregar al menos una imagen", "error");
+        return;
     }
     
     try {
-        let imageUrls = [];
+        let imageUrls = [...existingImages]; // Mantener imágenes existentes
         
-        if (files.length > 0) {
-            for (const file of files) {
+        // Subir nuevas imágenes
+        if (imageFiles.length > 0) {
+            for (const file of imageFiles) {
                 if (file.size > 2 * 1024 * 1024) {
                     showNotification(`La imagen ${file.name} es demasiado grande (máximo 2MB)`, "error");
                     return;
@@ -897,16 +1210,17 @@ async function handleProductSubmit(e) {
                 const imageUrl = await window.uploadImage(file, appState.storeId);
                 imageUrls.push(imageUrl);
             }
-        } else if (productId) {
-            const existingImages = document.querySelectorAll('.existing-image');
-            existingImages.forEach(input => {
-                if (input.value) imageUrls.push(input.value);
-            });
         }
         
-        if (imageUrls.length === 0) {
-            showNotification("Debes agregar al menos una imagen", "error");
-            return;
+        // Determinar la imagen de portada
+        const featuredRadio = document.querySelector('input[name="featured-image"]:checked');
+        let featuredIndex = featuredRadio ? parseInt(featuredRadio.value) : 0;
+        
+        // Reordenar array si es necesario (la primera debe ser la portada)
+        if (featuredIndex > 0 && imageUrls[featuredIndex]) {
+            const featuredImage = imageUrls[featuredIndex];
+            imageUrls.splice(featuredIndex, 1);
+            imageUrls.unshift(featuredImage);
         }
         
         const productData = {
@@ -951,6 +1265,10 @@ async function handleProductSubmit(e) {
         
         await loadStoreProducts(appState.storeId);
         closeAllModals();
+        
+        // Limpiar imágenes en edición
+        appState.editingProductImages = [];
+        
     } catch (error) {
         console.error("Error guardando producto:", error);
         showNotification("Error guardando producto", "error");
@@ -1345,19 +1663,12 @@ function openAddProductModal() {
     elements.productCategory.value = "";
     document.getElementById('modal-title').textContent = "Agregar Producto";
     
-    const imageContainer = document.querySelector('.image-inputs');
-    imageContainer.innerHTML = `
-        <div class="image-input">
-            <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg" required>
-            <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="image-input">
-            <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg">
-            <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
-        </div>
-    `;
+    // Limpiar imágenes en edición
+    appState.editingProductImages = [];
     
-    document.querySelector('.preview-container').innerHTML = "";
+    // Renderizar inputs de imágenes vacíos
+    renderImageInputs([], true);
+    
     openModal(elements.productModal);
 }
 
@@ -1379,83 +1690,13 @@ function openEditProductModal(productId) {
     elements.productCategory.value = product.categoryId || "";
     document.getElementById('modal-title').textContent = "Editar Producto";
     
-    const imageContainer = document.querySelector('.image-inputs');
-    imageContainer.innerHTML = "";
+    // Guardar imágenes existentes para edición
+    appState.editingProductImages = product.images || [];
     
-    if (product.images && product.images.length > 0) {
-        product.images.forEach((img, index) => {
-            const div = document.createElement('div');
-            div.className = 'image-input';
-            div.innerHTML = `
-                <input type="text" class="existing-image" value="${img}" readonly>
-                <span class="image-label">Imagen ${index + 1}</span>
-                <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
-            `;
-            imageContainer.appendChild(div);
-        });
-    }
-    
-    const newInputs = 2;
-    for (let i = 0; i < newInputs; i++) {
-        const div = document.createElement('div');
-        div.className = 'image-input';
-        div.innerHTML = `
-            <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg">
-            <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
-        `;
-        imageContainer.appendChild(div);
-    }
-    
-    const previewContainer = document.querySelector('.preview-container');
-    previewContainer.innerHTML = "";
-    
-    if (product.images) {
-        product.images.forEach(img => {
-            const imgElement = document.createElement('img');
-            imgElement.className = 'preview-image';
-            imgElement.src = img;
-            previewContainer.appendChild(imgElement);
-        });
-    }
+    // Renderizar inputs con imágenes existentes
+    renderImageInputs(appState.editingProductImages, false);
     
     openModal(elements.productModal);
-}
-
-// Agregar input de imagen
-function addImageInput() {
-    const imageContainer = document.querySelector('.image-inputs');
-    const inputs = imageContainer.querySelectorAll('.image-input');
-    
-    if (inputs.length >= 5) {
-        showNotification("Máximo 5 imágenes por producto", "error");
-        return;
-    }
-    
-    const div = document.createElement('div');
-    div.className = 'image-input';
-    div.innerHTML = `
-        <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg">
-        <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
-    `;
-    imageContainer.appendChild(div);
-}
-
-// Previsualizar imagen
-function previewImage(input) {
-    const previewContainer = document.querySelector('.preview-container');
-    
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            const imgElement = document.createElement('img');
-            imgElement.className = 'preview-image';
-            imgElement.src = e.target.result;
-            previewContainer.appendChild(imgElement);
-        };
-        
-        reader.readAsDataURL(input.files[0]);
-    }
 }
 
 // Función para abrir modal

@@ -242,25 +242,20 @@
                     
                     <div class="form-group">
                         <label>Imágenes del producto (mínimo 1, máximo 5)</label>
-                        <div class="image-inputs">
-                            <div class="image-input">
-                                <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg" required>
-                                <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
-                            </div>
-                            <div class="image-input">
-                                <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg">
-                                <button type="button" class="btn-remove-image"><i class="fas fa-times"></i></button>
-                            </div>
+                        <div class="image-help-note">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Recomendaciones:</strong> 
+                            • Sube imágenes cuadradas (1:1) de al menos 800x800 píxeles para mejor calidad.<br>
+                            • La primera imagen será la <strong>portada</strong> del producto.<br>
+                            • Puedes reordenar arrastrando o usando las flechas.
+                        </div>
+                        <div id="image-inputs-container" class="image-inputs">
+                            <!-- Las imágenes se cargarán aquí dinámicamente -->
                         </div>
                         <button type="button" id="add-image" class="btn btn-secondary btn-small">
                             <i class="fas fa-plus"></i> Agregar otra imagen
                         </button>
                         <p class="help-text">Formatos aceptados: JPG, PNG. Tamaño máximo por imagen: 2MB.</p>
-                    </div>
-                    
-                    <div class="image-preview" id="image-preview">
-                        <p>Vista previa de imágenes:</p>
-                        <div class="preview-container"></div>
                     </div>
                     
                     <input type="hidden" id="product-id">
