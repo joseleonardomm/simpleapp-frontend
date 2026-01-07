@@ -347,13 +347,14 @@ body {
     border-color: var(--primary-color);
 }
 
-/* CARRUSEL DE IMÁGENES - ARREGLADO PARA MOSTRAR IMÁGENES COMPLETAS */
+/* CARRUSEL DE IMÁGENES - PROPORCIÓN CUADRADA FIJA */
 .product-image-container {
     position: relative;
-    height: 200px;
+    width: 100%;
     overflow: hidden;
     background-color: #f8f9fa;
-    width: 100%;
+    /* PROPORCIÓN CUADRADA FIJA - esto asegura que todas las imágenes tengan el mismo tamaño */
+    aspect-ratio: 1 / 1; /* Cuadrado perfecto */
 }
 
 .product-image-carousel {
@@ -363,12 +364,12 @@ body {
     width: 100%;
 }
 
-/* IMÁGENES CON AJUSTE CORRECTO - RECORTANDO BORDES PARA LLENAR EL CONTENEDOR */
+/* IMÁGENES QUE SE ADAPTAN AL CONTENEDOR CUADRADO */
 .product-image-carousel img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Recorta bordes para llenar el contenedor */
-    object-position: center; /* Centra la imagen al recortar */
+    object-fit: cover; /* Recorta la imagen para llenar el contenedor */
+    object-position: center; /* Centra la imagen en el recorte */
     flex-shrink: 0;
     cursor: pointer;
     transition: transform 0.3s ease;
@@ -440,19 +441,6 @@ body {
 .carousel-dot.active {
     background-color: white;
     transform: scale(1.2);
-}
-
-/* Para dispositivos móviles */
-@media (max-width: 768px) {
-    .product-image-container {
-        height: 180px;
-    }
-}
-
-@media (max-width: 480px) {
-    .product-image-container {
-        height: 160px;
-    }
 }
 
 .product-info {
@@ -1107,6 +1095,21 @@ body {
 .btn-remove-image:hover {
     background-color: #ffcccc;
     color: var(--danger-color);
+}
+
+/* MENSAJE DE AYUDA PARA IMÁGENES CUADRADAS */
+.image-help-note {
+    background-color: rgba(37, 211, 102, 0.1);
+    border-left: 4px solid var(--primary-color);
+    padding: 10px 15px;
+    margin-top: 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.image-help-note i {
+    color: var(--primary-color);
+    margin-right: 8px;
 }
 
 .help-text {
