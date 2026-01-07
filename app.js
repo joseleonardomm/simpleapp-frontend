@@ -569,32 +569,14 @@ function setupEventListeners() {
             removeFromCart(productId);
         }
         
-        // Controles del carrusel - ARREGLADO
-        if (e.target.closest('.carousel-control')) {
-            const control = e.target.closest('.carousel-control');
-            const productId = control.dataset.id;
-            const direction = control.classList.contains('next') ? 1 : -1;
-            navigateCarousel(productId, direction);
-        }
-        
-        // Puntos del carrusel - ARREGLADO
-        if (e.target.closest('.carousel-dot')) {
-            const dot = e.target.closest('.carousel-dot');
-            const productId = dot.dataset.id;
-            const index = parseInt(dot.dataset.index);
-            navigateCarousel(productId, 0, index);
-        }
-        
-        // Imágenes clickables para visor
-        if (e.target.closest('.product-image-carousel img')) {
-            const img = e.target.closest('.product-image-carousel img');
-            const productCard = img.closest('.product-card');
+        // Imágenes clickables para visor - MODIFICADO para usar product-image-single
+        if (e.target.closest('.product-image-single') || e.target.closest('.no-image-placeholder')) {
+            const productCard = e.target.closest('.product-card');
             const productId = productCard.dataset.id;
             const product = appState.products.find(p => p.id === productId);
             
-            if (product && product.images) {
-                const imgIndex = Array.from(img.parentElement.children).indexOf(img);
-                openImageViewer(product.images, imgIndex);
+            if (product && product.images && product.images.length > 0) {
+                openImageViewer(product.images, 0); // Siempre abrir desde la primera imagen
             }
         }
         
@@ -942,44 +924,6 @@ function addNewImageRow() {
     container.appendChild(newRow);
     
     updateImageRows();
-}
-
-// Navegación del carrusel - ARREGLADO COMPLETAMENTE
-function navigateCarousel(productId, direction, specificIndex = null) {
-    const productCard = document.querySelector(`.product-card[data-id="${productId}"]`);
-    if (!productCard) return;
-    
-    const carousel = productCard.querySelector('.product-image-carousel');
-    const dots = productCard.querySelectorAll('.carousel-dot');
-    const images = carousel.querySelectorAll('img');
-    
-    if (images.length <= 1) return;
-    
-    let currentIndex = 0;
-    dots.forEach((dot, index) => {
-        if (dot.classList.contains('active')) {
-            currentIndex = index;
-        }
-    });
-    
-    let newIndex;
-    if (specificIndex !== null) {
-        newIndex = specificIndex;
-    } else {
-        newIndex = (currentIndex + direction + images.length) % images.length;
-    }
-    
-    // Calcular desplazamiento CORRECTO
-    // El carrusel tiene width: 100% * número de imágenes
-    // Cada imagen ocupa 100% del ancho del contenedor padre
-    const translateX = -(newIndex * 100); // Porcentaje de desplazamiento
-    carousel.style.transform = `translateX(${translateX}%)`;
-    
-    // Actualizar puntos activos
-    dots.forEach(dot => dot.classList.remove('active'));
-    if (dots[newIndex]) {
-        dots[newIndex].classList.add('active');
-    }
 }
 
 // Abrir visor de imágenes
@@ -1806,7 +1750,7 @@ function renderCatalogProducts() {
     });
 }
 
-// Crear tarjeta de producto - ARREGLADA para mostrar imágenes completas
+// Crear tarjeta de producto - MODIFICADO: Sin carrusel en miniaturas, solo portada
 function createProductCard(product, isAdmin) {
     const card = document.createElement('div');
     card.className = 'product-card';
@@ -1819,39 +1763,19 @@ function createProductCard(product, isAdmin) {
     const category = product.categoryId ? 
         appState.categories.find(c => c.id === product.categoryId) : null;
     
-    // CARRUSEL CORREGIDO - IMÁGENES SE VEN COMPLETAS
-    let carouselHTML = '';
+    // IMAGEN: SOLO LA PORTADA (primera imagen) - SIN CARRUSEL EN MINIATURA
+    let imageHTML = '';
     if (product.images && product.images.length > 0) {
-        carouselHTML = `
+        // Solo mostrar la primera imagen (portada) en miniatura
+        imageHTML = `
             <div class="product-image-container">
-                <div class="product-image-carousel" style="width: ${100 * product.images.length}%;">
-                    ${product.images.map((img, index) => `
-                        <img src="${img}" alt="${product.name} - Imagen ${index + 1}" 
-                             class="product-image" 
-                             onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300?text=Imagen+no+disponible'"
-                             data-index="${index}">
-                    `).join('')}
-                </div>
-                ${product.images.length > 1 ? `
-                    <div class="carousel-controls">
-                        <button class="carousel-control prev" data-id="${product.id}">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <button class="carousel-control next" data-id="${product.id}">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                    <div class="carousel-dots">
-                        ${product.images.map((_, index) => `
-                            <button class="carousel-dot ${index === 0 ? 'active' : ''}" 
-                                    data-id="${product.id}" data-index="${index}"></button>
-                        `).join('')}
-                    </div>
-                ` : ''}
+                <img src="${product.images[0]}" alt="${product.name}" 
+                     class="product-image-single" 
+                     onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300?text=Imagen+no+disponible'">
             </div>
         `;
     } else {
-        carouselHTML = `
+        imageHTML = `
             <div class="product-image-container">
                 <div class="no-image-placeholder">
                     <i class="fas fa-image"></i>
@@ -1907,7 +1831,7 @@ function createProductCard(product, isAdmin) {
         `<span class="product-category-badge">${category.name}</span>` : '';
     
     card.innerHTML = `
-        ${carouselHTML}
+        ${imageHTML}
         <div class="product-info">
             <h3 class="product-name">${product.name}</h3>
             <div class="product-price">$${product.price.toFixed(2)}</div>

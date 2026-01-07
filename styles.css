@@ -347,7 +347,7 @@ body {
     border-color: var(--primary-color);
 }
 
-/* CARRUSEL DE IMÁGENES - PROPORCIÓN CUADRADA FIJA */
+/* CONTENEDOR DE IMAGEN ÚNICA - PROPORCIÓN CUADRADA FIJA */
 .product-image-container {
     position: relative;
     width: 100%;
@@ -357,20 +357,12 @@ body {
     aspect-ratio: 1 / 1; /* Cuadrado perfecto */
 }
 
-.product-image-carousel {
-    display: flex;
-    transition: transform 0.5s ease;
-    height: 100%;
-    width: 100%;
-}
-
-/* IMÁGENES QUE SE ADAPTAN AL CONTENEDOR CUADRADO */
-.product-image-carousel img {
+/* IMAGEN ÚNICA - SIN CARRUSEL */
+.product-image-single {
     width: 100%;
     height: 100%;
     object-fit: cover; /* Recorta la imagen para llenar el contenedor */
     object-position: center; /* Centra la imagen en el recorte */
-    flex-shrink: 0;
     cursor: pointer;
     transition: transform 0.3s ease;
     background-color: #f8f9fa;
@@ -378,11 +370,41 @@ body {
 }
 
 /* Mantener el hover effect */
-.product-image-carousel img:hover {
+.product-image-single:hover {
     transform: scale(1.02);
 }
 
-/* Controles del carrusel */
+/* Cuando no hay imágenes */
+.no-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--light-gray) 0%, #e9ecef 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-color);
+    font-size: 0.9rem;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.no-image-placeholder:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #d1d9e0 100%);
+}
+
+.no-image-placeholder i {
+    font-size: 2rem;
+    color: #adb5bd;
+}
+
+/* ELIMINAR CONTROLES DE CARRUSEL DE LAS MINIATURAS */
+.product-image-container .carousel-controls,
+.product-image-container .carousel-dots {
+    display: none !important;
+}
+
+/* Controles del carrusel (para el visor modal) */
 .carousel-controls {
     position: absolute;
     top: 50%;
@@ -414,7 +436,7 @@ body {
     transform: scale(1.1);
 }
 
-/* Puntos indicadores */
+/* Puntos indicadores (solo para el visor modal) */
 .carousel-dots {
     position: absolute;
     bottom: 10px;
@@ -1315,25 +1337,6 @@ body {
     font-size: 1.5rem;
     margin-bottom: 10px;
     color: var(--gray-color);
-}
-
-/* Cuando no hay imágenes */
-.no-image-placeholder {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, var(--light-gray) 0%, #e9ecef 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--gray-color);
-    font-size: 0.9rem;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.no-image-placeholder i {
-    font-size: 2rem;
-    color: #adb5bd;
 }
 
 /* Footer */
