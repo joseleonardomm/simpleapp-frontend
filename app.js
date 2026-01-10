@@ -652,19 +652,10 @@ function renderImageInputs(images = [], isNew = false) {
         });
     }
     
-    // Si estamos agregando un nuevo producto, agregar un input extra vacío
-    if (isNew && images.length < 5) {
-        const emptyInputRow = createImageInputRow(null, images.length, false);
-        newContainerRef.appendChild(emptyInputRow);
-    }
-    
-    // Asegurar que el contenedor esté en el DOM
-    if (!newContainerRef.parentNode) {
-        document.querySelector('#product-form .form-group:last-child').insertBefore(newContainerRef, document.getElementById('add-image'));
-    }
+    // NO agregar fila extra automáticamente - el usuario la agregará si quiere
 }
 
-// Función para crear una fila de input de imagen
+// Función para crear una fila de input de imagen - SOLUCIONADO: sin scroll
 function createImageInputRow(imageData, index, isFeatured = false) {
     const row = document.createElement('div');
     row.className = 'image-input-row';
@@ -689,7 +680,6 @@ function createImageInputRow(imageData, index, isFeatured = false) {
     
     html += `</div>`;
     
-    // INPUT DE ARCHIVO COMPATIBLE CON MÓVILES
     html += `
         <div class="image-input-controls">
             <div class="image-featured">
@@ -748,7 +738,15 @@ function createImageInputRow(imageData, index, isFeatured = false) {
     
     if (fileInput) {
         fileInput.addEventListener('change', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             handleImageFileSelect(e, row);
+        });
+        
+        // Agregar también para evitar scroll en focus
+        fileInput.addEventListener('focus', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
         });
     }
     
@@ -787,7 +785,7 @@ function createImageInputRow(imageData, index, isFeatured = false) {
     return row;
 }
 
-// Manejar selección de archivo
+// Manejar selección de archivo - SOLUCIONADO: sin scroll
 function handleImageFileSelect(event, row) {
     const file = event.target.files[0];
     if (!file) return;
@@ -797,6 +795,11 @@ function handleImageFileSelect(event, row) {
         event.target.value = '';
         return;
     }
+    
+    // PREVENIR SCROLL - guardar posición actual
+    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+    const container = document.querySelector('.modal-content');
+    const containerScroll = container ? container.scrollTop : 0;
     
     const previewContainer = row.querySelector('.image-input-preview');
     const imageInfo = row.querySelector('.image-info');
@@ -829,6 +832,14 @@ function handleImageFileSelect(event, row) {
         if (moveDownBtn && row.nextElementSibling) {
             moveDownBtn.disabled = false;
         }
+        
+        // RESTAURAR POSICIÓN DEL SCROLL
+        setTimeout(() => {
+            window.scrollTo(0, scrollPosition);
+            if (container) {
+                container.scrollTop = containerScroll;
+            }
+        }, 50);
     };
     reader.readAsDataURL(file);
 }
@@ -1117,7 +1128,7 @@ async function handleRegister(e) {
     }
 }
 
-// Manejar submit del formulario - CORRECCIÓN PARA MÓVILES
+// Manejar submit del formulario - SOLUCIONADO: solo 1 imagen requerida
 async function handleProductSubmit(e) {
     e.preventDefault();
     e.stopPropagation(); // Importante para móviles
@@ -1164,8 +1175,17 @@ async function handleProductSubmit(e) {
             }
         });
         
-        if (existingImages.length === 0 && imageFiles.length === 0) {
+        // SOLUCIÓN: Solo se requiere al menos 1 imagen, no 2
+        const totalImages = existingImages.length + imageFiles.length;
+        if (totalImages === 0) {
             showNotification("Debes agregar al menos una imagen", "error");
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+            return;
+        }
+        
+        if (totalImages > 5) {
+            showNotification("Máximo 5 imágenes por producto", "error");
             submitButton.disabled = false;
             submitButton.innerHTML = originalText;
             return;
