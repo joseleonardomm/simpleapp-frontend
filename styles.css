@@ -1450,7 +1450,7 @@ body {
     color: var(--primary-dark);
 }
 
-/* Responsive */
+/* CORRECCIONES PARA MÓVILES - INPUTS DE ARCHIVO */
 @media (max-width: 768px) {
     .finance-button-container {
         top: 0;
@@ -1546,6 +1546,45 @@ body {
         grid-template-columns: repeat(2, 1fr);
     }
     
+    /* Mejorar el tamaño de los inputs de archivo en móviles */
+    .image-file {
+        font-size: 16px !important; /* Previene el zoom en iOS */
+        padding: 12px !important;
+    }
+    
+    .btn-file-upload {
+        padding: 12px 16px !important;
+        font-size: 16px !important;
+        min-height: 44px; /* Tamaño mínimo para toques en móviles */
+    }
+    
+    /* Mejorar el área de toque en móviles */
+    .product-actions .btn,
+    .modal-footer .btn {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Asegurar que los inputs sean legibles en móviles */
+    input, textarea, select {
+        font-size: 16px !important; /* Previene el zoom automático en iOS */
+    }
+    
+    /* Mejorar el botón de agregar imagen */
+    #add-image {
+        width: 100%;
+        padding: 14px;
+        font-size: 16px;
+        margin-top: 10px;
+    }
+    
+    /* Asegurar que las imágenes se muestren correctamente */
+    .product-image-single {
+        max-height: 300px;
+    }
+    
     /* Responsive para sistema de imágenes */
     .image-input-row {
         flex-direction: column;
@@ -1606,5 +1645,90 @@ body {
     .btn-remove-image {
         width: 100%;
         justify-content: center;
+    }
+}
+
+/* Prevenir zoom automático en iOS en inputs */
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+    input, textarea, select {
+        font-size: 16px !important;
+    }
+}
+
+/* Spinner para carga */
+.fa-spinner.fa-spin {
+    animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .image-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .image-input-row {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .image-input-preview {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+/* Asegurar que los botones sean tocables en móviles */
+button, 
+.btn, 
+.btn-file-upload,
+input[type="submit"],
+input[type="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Mejorar la experiencia táctil en móviles */
+@media (hover: none) and (pointer: coarse) {
+    .btn:hover, 
+    .btn-file-upload:hover,
+    .product-card:hover {
+        transform: none;
+    }
+    
+    .product-actions .btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .modal-footer .btn {
+        flex: 1;
+        min-height: 50px;
+    }
+}
+
+/* Optimizar para dispositivos táctiles */
+@media (pointer: coarse) {
+    .quantity-btn,
+    .btn-move-up,
+    .btn-move-down {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .carousel-control {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .viewer-nav {
+        width: 60px;
+        height: 60px;
     }
 }

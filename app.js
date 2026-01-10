@@ -526,10 +526,14 @@ function setupEventListeners() {
         });
     });
     
-    // Botón para agregar nueva imagen
+    // Botón para agregar nueva imagen - CORREGIDO PARA MÓVILES
     const addImageBtn = document.getElementById('add-image');
     if (addImageBtn) {
-        addImageBtn.addEventListener('click', addNewImageRow);
+        addImageBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            addNewImageRow();
+        });
     }
     
     // Event delegation para botones dinámicos
@@ -624,29 +628,39 @@ function setupEventListeners() {
     });
 }
 
-// Función para renderizar inputs de imágenes con controles de portada
+// Función para renderizar inputs de imágenes con controles de portada - CORREGIDA PARA MÓVILES
 function renderImageInputs(images = [], isNew = false) {
     const container = document.getElementById('image-inputs-container');
     if (!container) return;
     
     container.innerHTML = '';
     
+    // Limpiar eventos anteriores para evitar duplicados
+    const newContainer = container.cloneNode(false);
+    container.parentNode.replaceChild(newContainer, container);
+    const newContainerRef = newContainer;
+    
     if (images.length === 0) {
         // Si no hay imágenes, crear un input vacío
         const inputRow = createImageInputRow(null, 0, true);
-        container.appendChild(inputRow);
+        newContainerRef.appendChild(inputRow);
     } else {
         // Renderizar cada imagen con sus controles
         images.forEach((image, index) => {
             const inputRow = createImageInputRow(image, index, index === 0);
-            container.appendChild(inputRow);
+            newContainerRef.appendChild(inputRow);
         });
     }
     
     // Si estamos agregando un nuevo producto, agregar un input extra vacío
     if (isNew && images.length < 5) {
         const emptyInputRow = createImageInputRow(null, images.length, false);
-        container.appendChild(emptyInputRow);
+        newContainerRef.appendChild(emptyInputRow);
+    }
+    
+    // Asegurar que el contenedor esté en el DOM
+    if (!newContainerRef.parentNode) {
+        document.querySelector('#product-form .form-group:last-child').insertBefore(newContainerRef, document.getElementById('add-image'));
     }
 }
 
@@ -675,6 +689,7 @@ function createImageInputRow(imageData, index, isFeatured = false) {
     
     html += `</div>`;
     
+    // INPUT DE ARCHIVO COMPATIBLE CON MÓVILES
     html += `
         <div class="image-input-controls">
             <div class="image-featured">
@@ -689,8 +704,9 @@ function createImageInputRow(imageData, index, isFeatured = false) {
             <div class="image-actions">
                 <label class="btn-file-upload">
                     <i class="fas fa-camera"></i> ${imageData ? 'Cambiar' : 'Seleccionar'}
-                    <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg" 
-                           style="display: none;" ${index === 0 && !imageData ? 'required' : ''}>
+                    <input type="file" class="image-file" accept="image/jpeg, image/png, image/jpg, image/webp" 
+                           style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;"
+                           ${index === 0 && !imageData ? 'required' : ''}>
                 </label>
                 
                 <button type="button" class="btn-remove-image" ${!imageData ? 'disabled' : ''}>
@@ -907,7 +923,7 @@ function updateFeaturedBadge(row, isFeatured) {
     }
 }
 
-// Nueva función para agregar fila de imagen
+// Nueva función para agregar fila de imagen - CORREGIDA PARA MÓVILES
 function addNewImageRow() {
     const container = document.getElementById('image-inputs-container');
     if (!container) return;
@@ -922,6 +938,9 @@ function addNewImageRow() {
     const newIndex = rows.length;
     const newRow = createImageInputRow(null, newIndex, false);
     container.appendChild(newRow);
+    
+    // Forzar reflow para asegurar que los eventos se adjunten correctamente
+    void container.offsetWidth;
     
     updateImageRows();
 }
@@ -1098,124 +1117,151 @@ async function handleRegister(e) {
     }
 }
 
-// Modificar la función handleProductSubmit para manejar imágenes correctamente
+// Manejar submit del formulario - CORRECCIÓN PARA MÓVILES
 async function handleProductSubmit(e) {
     e.preventDefault();
+    e.stopPropagation(); // Importante para móviles
     
     if (!appState.userEnabled) {
         showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
         return;
     }
     
-    const productId = elements.productId.value;
-    const name = elements.productName.value.trim();
-    const price = parseFloat(elements.productPrice.value);
-    const description = elements.productDescription.value.trim();
-    const categoryId = elements.productCategory.value || null;
-    
-    if (!name || !price || price <= 0 || isNaN(price)) {
-        showNotification("Completa nombre y precio válido", "error");
-        return;
-    }
-    
-    // Obtener imágenes del formulario
-    const imageRows = document.querySelectorAll('.image-input-row');
-    const imageFiles = [];
-    const existingImages = [];
-    
-    // Recopilar imágenes existentes y archivos nuevos
-    imageRows.forEach(row => {
-        const existingImageInput = row.querySelector('.existing-image-input');
-        const fileInput = row.querySelector('.image-file');
-        
-        if (existingImageInput && existingImageInput.value) {
-            existingImages.push(existingImageInput.value);
-        } else if (fileInput && fileInput.files[0]) {
-            imageFiles.push(fileInput.files[0]);
-        }
-    });
-    
-    if (existingImages.length === 0 && imageFiles.length === 0) {
-        showNotification("Debes agregar al menos una imagen", "error");
-        return;
-    }
+    // Deshabilitar el botón de submit para evitar envíos múltiples
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
     
     try {
-        let imageUrls = [...existingImages]; // Mantener imágenes existentes
+        const productId = elements.productId.value;
+        const name = elements.productName.value.trim();
+        const price = parseFloat(elements.productPrice.value);
+        const description = elements.productDescription.value.trim();
+        const categoryId = elements.productCategory.value || null;
         
-        // Subir nuevas imágenes
-        if (imageFiles.length > 0) {
-            for (const file of imageFiles) {
-                if (file.size > 2 * 1024 * 1024) {
-                    showNotification(`La imagen ${file.name} es demasiado grande (máximo 2MB)`, "error");
-                    return;
-                }
-                
-                const imageUrl = await window.uploadImage(file, appState.storeId);
-                imageUrls.push(imageUrl);
+        if (!name || !price || price <= 0 || isNaN(price)) {
+            showNotification("Completa nombre y precio válido", "error");
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+            return;
+        }
+        
+        // Obtener imágenes del formulario
+        const imageRows = document.querySelectorAll('.image-input-row');
+        const imageFiles = [];
+        const existingImages = [];
+        
+        // Recopilar imágenes existentes y archivos nuevos
+        imageRows.forEach(row => {
+            const existingImageInput = row.querySelector('.existing-image-input');
+            const fileInput = row.querySelector('.image-file');
+            
+            if (existingImageInput && existingImageInput.value) {
+                existingImages.push(existingImageInput.value);
+            } else if (fileInput && fileInput.files[0]) {
+                imageFiles.push(fileInput.files[0]);
             }
+        });
+        
+        if (existingImages.length === 0 && imageFiles.length === 0) {
+            showNotification("Debes agregar al menos una imagen", "error");
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+            return;
         }
         
-        // Determinar la imagen de portada
-        const featuredRadio = document.querySelector('input[name="featured-image"]:checked');
-        let featuredIndex = featuredRadio ? parseInt(featuredRadio.value) : 0;
-        
-        // Reordenar array si es necesario (la primera debe ser la portada)
-        if (featuredIndex > 0 && imageUrls[featuredIndex]) {
-            const featuredImage = imageUrls[featuredIndex];
-            imageUrls.splice(featuredIndex, 1);
-            imageUrls.unshift(featuredImage);
+        try {
+            let imageUrls = [...existingImages]; // Mantener imágenes existentes
+            
+            // Subir nuevas imágenes
+            if (imageFiles.length > 0) {
+                for (const file of imageFiles) {
+                    if (file.size > 2 * 1024 * 1024) {
+                        showNotification(`La imagen ${file.name} es demasiado grande (máximo 2MB)`, "error");
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                        return;
+                    }
+                    
+                    const imageUrl = await window.uploadImage(file, appState.storeId);
+                    imageUrls.push(imageUrl);
+                }
+            }
+            
+            // Determinar la imagen de portada
+            const featuredRadio = document.querySelector('input[name="featured-image"]:checked');
+            let featuredIndex = featuredRadio ? parseInt(featuredRadio.value) : 0;
+            
+            // Reordenar array si es necesario (la primera debe ser la portada)
+            if (featuredIndex > 0 && imageUrls[featuredIndex]) {
+                const featuredImage = imageUrls[featuredIndex];
+                imageUrls.splice(featuredIndex, 1);
+                imageUrls.unshift(featuredImage);
+            }
+            
+            const productData = {
+                name,
+                price,
+                description,
+                images: imageUrls,
+                categoryId: categoryId,
+                updatedAt: window.firebaseServices.serverTimestamp()
+            };
+            
+            if (productId) {
+                await window.firebaseServices.updateDoc(
+                    window.firebaseServices.doc(
+                        window.firebaseServices.db, 
+                        "stores", 
+                        appState.storeId, 
+                        "products", 
+                        productId
+                    ),
+                    productData
+                );
+                showNotification("Producto actualizado", "success");
+            } else {
+                productData.createdAt = window.firebaseServices.serverTimestamp();
+                
+                const docRef = await window.firebaseServices.addDoc(
+                    window.firebaseServices.collection(
+                        window.firebaseServices.db,
+                        "stores",
+                        appState.storeId,
+                        "products"
+                    ),
+                    productData
+                );
+                
+                const newProductId = docRef.id;
+                console.log("Nuevo producto creado con ID:", newProductId);
+                
+                showNotification("Producto agregado", "success");
+            }
+            
+            await loadStoreProducts(appState.storeId);
+            closeAllModals();
+            
+            // Limpiar imágenes en edición
+            appState.editingProductImages = [];
+            
+        } catch (error) {
+            console.error("Error guardando producto:", error);
+            showNotification("Error guardando producto", "error");
         }
         
-        const productData = {
-            name,
-            price,
-            description,
-            images: imageUrls,
-            categoryId: categoryId,
-            updatedAt: window.firebaseServices.serverTimestamp()
-        };
-        
-        if (productId) {
-            await window.firebaseServices.updateDoc(
-                window.firebaseServices.doc(
-                    window.firebaseServices.db, 
-                    "stores", 
-                    appState.storeId, 
-                    "products", 
-                    productId
-                ),
-                productData
-            );
-            showNotification("Producto actualizado", "success");
-        } else {
-            productData.createdAt = window.firebaseServices.serverTimestamp();
-            
-            const docRef = await window.firebaseServices.addDoc(
-                window.firebaseServices.collection(
-                    window.firebaseServices.db,
-                    "stores",
-                    appState.storeId,
-                    "products"
-                ),
-                productData
-            );
-            
-            const newProductId = docRef.id;
-            console.log("Nuevo producto creado con ID:", newProductId);
-            
-            showNotification("Producto agregado", "success");
-        }
-        
-        await loadStoreProducts(appState.storeId);
-        closeAllModals();
-        
-        // Limpiar imágenes en edición
-        appState.editingProductImages = [];
+        // Rehabilitar botón después de guardar
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
         
     } catch (error) {
-        console.error("Error guardando producto:", error);
+        console.error("Error en handleProductSubmit:", error);
         showNotification("Error guardando producto", "error");
+        
+        // Rehabilitar botón en caso de error
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
     }
 }
 
