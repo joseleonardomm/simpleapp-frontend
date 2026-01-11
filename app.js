@@ -13,7 +13,11 @@ let appState = {
     currentCategoryFilter: null,
     viewerImages: [],
     viewerIndex: 0,
-    editingProductImages: [] // Para manejar imágenes durante edición
+    editingProductImages: [], // Para manejar imágenes durante edición
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalPages: 1,
+    currentMode: 'catalog' // 'catalog' o 'admin'
 };
 
 // Referencias a elementos DOM
@@ -92,7 +96,21 @@ const elements = {
     
     tabBtns: document.querySelectorAll('.tab-btn'),
     authModalTitle: document.getElementById('auth-modal-title'),
-    authError: document.getElementById('auth-error')
+    authError: document.getElementById('auth-error'),
+    
+    // Nuevos elementos para carrito flotante y paginación
+    floatingCart: document.getElementById('floating-cart'),
+    floatingCartCount: document.getElementById('floating-cart-count'),
+    paginationContainerAdmin: document.getElementById('pagination-container-admin'),
+    paginationContainerCatalog: document.getElementById('pagination-container-catalog'),
+    prevPageAdmin: document.getElementById('prev-page-admin'),
+    nextPageAdmin: document.getElementById('next-page-admin'),
+    currentPageDisplayAdmin: document.getElementById('current-page-display-admin'),
+    totalPagesDisplayAdmin: document.getElementById('total-pages-display-admin'),
+    prevPageCatalog: document.getElementById('prev-page-catalog'),
+    nextPageCatalog: document.getElementById('next-page-catalog'),
+    currentPageDisplayCatalog: document.getElementById('current-page-display-catalog'),
+    totalPagesDisplayCatalog: document.getElementById('total-pages-display-catalog')
 };
 
 // Inicializar la aplicación
@@ -102,6 +120,7 @@ async function initApp() {
     try {
         elements.currentYear.textContent = new Date().getFullYear();
         setupEventListeners();
+        handleHistory(); // Manejar el historial del navegador
         checkURLParams();
         await setupFirebaseAuth();
         
@@ -220,6 +239,7 @@ async function loadUserStore(storeId) {
                 elements.myStoreBtn.classList.remove('hidden');
                 elements.addProduct.classList.remove('hidden');
                 elements.manageCategoriesBtn.classList.remove('hidden');
+                appState.currentMode = 'admin';
             }
             
             loadCartFromLocalStorage();
@@ -294,6 +314,7 @@ function showAccountDisabledMessage() {
     elements.addProduct.classList.add('hidden');
     elements.manageCategoriesBtn.classList.add('hidden');
     elements.financeButtonContainer.classList.add('hidden');
+    appState.currentMode = 'catalog';
     
     elements.catalogDescription.innerHTML = `
         <div style="text-align: center; padding: 30px;">
@@ -326,6 +347,7 @@ async function loadStoreForCustomer(storeId) {
             elements.configBtn.classList.add('hidden');
             elements.myStoreBtn.classList.add('hidden');
             elements.financeButtonContainer.classList.add('hidden');
+            appState.currentMode = 'catalog';
             
             await loadStoreProducts(storeId);
             loadCartFromLocalStorage();
@@ -366,6 +388,7 @@ async function createStoreForUser(storeId) {
             elements.myStoreBtn.classList.remove('hidden');
             elements.addProduct.classList.remove('hidden');
             elements.manageCategoriesBtn.classList.remove('hidden');
+            appState.currentMode = 'admin';
         }
         
         loadCartFromLocalStorage();
@@ -600,6 +623,7 @@ function setupEventListeners() {
                 appState.currentCategoryFilter = categoryId;
             }
             
+            appState.currentPage = 1; // Reiniciar a página 1 al cambiar filtro
             renderCatalogProducts();
         }
         
@@ -626,6 +650,31 @@ function setupEventListeners() {
             }
         }
     });
+    
+    // Carrito flotante
+    if (elements.floatingCart) {
+        elements.floatingCart.addEventListener('click', () => {
+            openModal(elements.cartModal);
+            updateCartUI();
+        });
+    }
+    
+    // Paginación
+    if (elements.prevPageAdmin) {
+        elements.prevPageAdmin.addEventListener('click', () => goToPrevPage('admin'));
+    }
+    
+    if (elements.nextPageAdmin) {
+        elements.nextPageAdmin.addEventListener('click', () => goToNextPage('admin'));
+    }
+    
+    if (elements.prevPageCatalog) {
+        elements.prevPageCatalog.addEventListener('click', () => goToPrevPage('catalog'));
+    }
+    
+    if (elements.nextPageCatalog) {
+        elements.nextPageCatalog.addEventListener('click', () => goToNextPage('catalog'));
+    }
 }
 
 // Función para renderizar inputs de imágenes con controles de portada - CORREGIDA PARA MÓVILES
@@ -1444,6 +1493,8 @@ async function handleLogout() {
         appState.products = [];
         appState.categories = [];
         appState.userEnabled = false;
+        appState.currentPage = 1;
+        appState.currentMode = 'catalog';
         
         elements.adminPanel.classList.add('hidden');
         elements.catalogPanel.classList.remove('hidden');
@@ -1464,6 +1515,7 @@ async function handleLogout() {
         appState.cart = [];
         saveCartToLocalStorage();
         updateCartCount();
+        updateFloatingCart();
         
         window.location.href = '/';
         
@@ -1714,6 +1766,10 @@ function openModal(modal) {
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+    
+    // Agregar estado al historial
+    const modalId = modal.id;
+    history.pushState({ modal: modalId, page: appState.currentPage, mode: appState.currentMode }, '', window.location.href);
 }
 
 // Función para cerrar modales
@@ -1722,13 +1778,71 @@ function closeAllModals() {
         modal.classList.remove('active');
     });
     document.body.style.overflow = '';
+    
+    // Agregar estado al historial sin modal
+    history.pushState({ modal: null, page: appState.currentPage, mode: appState.currentMode }, '', window.location.href);
+}
+
+// Manejar el historial del navegador
+function handleHistory() {
+    // Agregar un estado inicial al historial
+    if (!history.state) {
+        history.replaceState({ modal: null, page: 1, mode: 'catalog' }, '', window.location.href);
+    }
+    
+    // Manejar el botón de atrás
+    window.addEventListener('popstate', function(event) {
+        if (event.state) {
+            // Cerrar modales si estamos volviendo atrás
+            if (event.state.modal === null) {
+                closeAllModals();
+            } else {
+                // Si hay un modal en el estado, abrirlo
+                const modal = document.getElementById(event.state.modal);
+                if (modal) {
+                    openModal(modal);
+                }
+            }
+            
+            // Restaurar página si está en el estado
+            if (event.state.page) {
+                appState.currentPage = event.state.page;
+            }
+            
+            // Restaurar modo si está en el estado
+            if (event.state.mode) {
+                appState.currentMode = event.state.mode;
+            }
+            
+            updateUI();
+        }
+    });
+}
+
+// Calcular paginación
+function calculatePagination(products) {
+    const totalProducts = products.length;
+    const totalPages = Math.ceil(totalProducts / appState.itemsPerPage);
+    
+    // Asegurar que currentPage esté dentro de los límites
+    if (appState.currentPage > totalPages) {
+        appState.currentPage = 1;
+    }
+    
+    return {
+        totalPages: totalPages,
+        currentPage: appState.currentPage,
+        startIndex: (appState.currentPage - 1) * appState.itemsPerPage,
+        endIndex: Math.min(appState.currentPage * appState.itemsPerPage, totalProducts)
+    };
 }
 
 // Actualizar UI
 function updateUI() {
     updateCartCount();
+    updateFloatingCart();
     
-    if (appState.currentUser && appState.userEnabled && appState.storeId === appState.currentUser.uid) {
+    if (appState.currentMode === 'admin') {
         renderAdminProducts();
     } else {
         renderCatalogProducts();
@@ -1747,15 +1861,33 @@ function renderAdminProducts() {
                 <p>Agrega tu primer producto para comenzar</p>
             </div>
         `;
+        // Ocultar paginación si no hay productos
+        if (elements.paginationContainerAdmin) {
+            elements.paginationContainerAdmin.classList.add('hidden');
+        }
         return;
     }
     
+    // Calcular paginación
+    const pagination = calculatePagination(appState.products);
+    const productsToShow = appState.products.slice(pagination.startIndex, pagination.endIndex);
+    
     container.innerHTML = '';
     
-    appState.products.forEach(product => {
+    productsToShow.forEach(product => {
         const productCard = createProductCard(product, true);
         container.appendChild(productCard);
     });
+    
+    // Mostrar paginación si hay más de 10 productos
+    if (elements.paginationContainerAdmin) {
+        if (pagination.totalPages > 1) {
+            elements.paginationContainerAdmin.classList.remove('hidden');
+            updatePaginationUI('admin', pagination);
+        } else {
+            elements.paginationContainerAdmin.classList.add('hidden');
+        }
+    }
 }
 
 // Renderizar productos en catálogo
@@ -1777,8 +1909,16 @@ function renderCatalogProducts() {
                 <p>${appState.currentCategoryFilter ? 'Prueba con otra categoría' : 'No hay productos disponibles en este momento'}</p>
             </div>
         `;
+        // Ocultar paginación si no hay productos
+        if (elements.paginationContainerCatalog) {
+            elements.paginationContainerCatalog.classList.add('hidden');
+        }
         return;
     }
+    
+    // Calcular paginación
+    const pagination = calculatePagination(filteredProducts);
+    const productsToShow = filteredProducts.slice(pagination.startIndex, pagination.endIndex);
     
     container.innerHTML = '';
     
@@ -1791,10 +1931,7 @@ function renderCatalogProducts() {
         allBtn.textContent = 'Todos';
         allBtn.addEventListener('click', () => {
             appState.currentCategoryFilter = null;
-            document.querySelectorAll('.category-filter').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            allBtn.classList.add('active');
+            appState.currentPage = 1;
             renderCatalogProducts();
         });
         filtersContainer.appendChild(allBtn);
@@ -1810,10 +1947,91 @@ function renderCatalogProducts() {
         container.appendChild(filtersContainer);
     }
     
-    filteredProducts.forEach(product => {
+    const productsGrid = document.createElement('div');
+    productsGrid.className = 'products-grid';
+    
+    productsToShow.forEach(product => {
         const productCard = createProductCard(product, false);
-        container.appendChild(productCard);
+        productsGrid.appendChild(productCard);
     });
+    
+    container.appendChild(productsGrid);
+    
+    // Mostrar paginación si hay más de 10 productos
+    if (elements.paginationContainerCatalog) {
+        if (pagination.totalPages > 1) {
+            elements.paginationContainerCatalog.classList.remove('hidden');
+            updatePaginationUI('catalog', pagination);
+        } else {
+            elements.paginationContainerCatalog.classList.add('hidden');
+        }
+    }
+}
+
+// Actualizar UI de paginación
+function updatePaginationUI(mode, pagination) {
+    if (mode === 'admin') {
+        if (elements.currentPageDisplayAdmin) {
+            elements.currentPageDisplayAdmin.textContent = pagination.currentPage;
+        }
+        if (elements.totalPagesDisplayAdmin) {
+            elements.totalPagesDisplayAdmin.textContent = pagination.totalPages;
+        }
+        
+        // Habilitar/deshabilitar botones
+        if (elements.prevPageAdmin) {
+            elements.prevPageAdmin.disabled = pagination.currentPage === 1;
+            elements.prevPageAdmin.classList.toggle('disabled', pagination.currentPage === 1);
+        }
+        
+        if (elements.nextPageAdmin) {
+            elements.nextPageAdmin.disabled = pagination.currentPage === pagination.totalPages;
+            elements.nextPageAdmin.classList.toggle('disabled', pagination.currentPage === pagination.totalPages);
+        }
+    } else {
+        if (elements.currentPageDisplayCatalog) {
+            elements.currentPageDisplayCatalog.textContent = pagination.currentPage;
+        }
+        if (elements.totalPagesDisplayCatalog) {
+            elements.totalPagesDisplayCatalog.textContent = pagination.totalPages;
+        }
+        
+        // Habilitar/deshabilitar botones
+        if (elements.prevPageCatalog) {
+            elements.prevPageCatalog.disabled = pagination.currentPage === 1;
+            elements.prevPageCatalog.classList.toggle('disabled', pagination.currentPage === 1);
+        }
+        
+        if (elements.nextPageCatalog) {
+            elements.nextPageCatalog.disabled = pagination.currentPage === pagination.totalPages;
+            elements.nextPageCatalog.classList.toggle('disabled', pagination.currentPage === pagination.totalPages);
+        }
+    }
+}
+
+// Funciones para cambiar de página
+function goToPrevPage(mode) {
+    if (appState.currentPage > 1) {
+        appState.currentPage--;
+        updateUI();
+        // Agregar al historial
+        history.pushState({ modal: null, page: appState.currentPage, mode: appState.currentMode }, '', window.location.href);
+    }
+}
+
+function goToNextPage(mode) {
+    const totalProducts = appState.currentCategoryFilter 
+        ? appState.products.filter(p => p.categoryId === appState.currentCategoryFilter).length
+        : appState.products.length;
+    
+    const totalPages = Math.ceil(totalProducts / appState.itemsPerPage);
+    
+    if (appState.currentPage < totalPages) {
+        appState.currentPage++;
+        updateUI();
+        // Agregar al historial
+        history.pushState({ modal: null, page: appState.currentPage, mode: appState.currentMode }, '', window.location.href);
+    }
 }
 
 // Crear tarjeta de producto - MODIFICADO: Sin carrusel en miniaturas, solo portada
@@ -1931,6 +2149,7 @@ function addToCart(productId) {
     
     saveCartToLocalStorage();
     updateUI();
+    updateFloatingCart();
     showNotification(`${product.name} agregado al carrito`, "success");
 }
 
@@ -1938,6 +2157,7 @@ function removeFromCart(productId) {
     appState.cart = appState.cart.filter(item => item.productId !== productId);
     saveCartToLocalStorage();
     updateUI();
+    updateFloatingCart();
     showNotification("Producto removido del carrito", "success");
 }
 
@@ -1954,6 +2174,7 @@ function updateCartQuantity(productId, change) {
         saveCartToLocalStorage();
         updateCartUI();
         updateCartCount();
+        updateFloatingCart();
     }
 }
 
@@ -1964,6 +2185,7 @@ function clearCart() {
         appState.cart = [];
         saveCartToLocalStorage();
         updateUI();
+        updateFloatingCart();
         showNotification("Carrito vaciado", "success");
     }
 }
@@ -1975,6 +2197,24 @@ function calculateCartTotal() {
 function updateCartCount() {
     const totalItems = appState.cart.reduce((total, item) => total + item.quantity, 0);
     elements.cartCount.textContent = totalItems;
+}
+
+// Actualizar carrito flotante
+function updateFloatingCart() {
+    const totalItems = appState.cart.reduce((total, item) => total + item.quantity, 0);
+    
+    if (elements.floatingCartCount) {
+        elements.floatingCartCount.textContent = totalItems;
+    }
+    
+    // Mostrar/ocultar el carrito flotante basado en si hay items
+    if (elements.floatingCart) {
+        if (totalItems > 0) {
+            elements.floatingCart.classList.add('visible');
+        } else {
+            elements.floatingCart.classList.remove('visible');
+        }
+    }
 }
 
 function updateCartUI() {
@@ -2044,6 +2284,7 @@ function loadCartFromLocalStorage() {
                 appState.cart = JSON.parse(savedCart);
                 updateCartCount();
                 updateCartUI();
+                updateFloatingCart();
             } catch (error) {
                 console.error("Error cargando carrito:", error);
                 appState.cart = [];
