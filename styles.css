@@ -269,6 +269,117 @@ body {
     margin-left: 5px;
 }
 
+/* ==================== */
+/* CARRIITO FLOTANTE */
+/* ==================== */
+.floating-cart {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateY(20px);
+    visibility: hidden;
+}
+
+.floating-cart.visible {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+}
+
+.floating-cart:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+.floating-cart-icon {
+    position: relative;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.floating-cart-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: var(--danger-color);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    border: 2px solid white;
+}
+
+/* ==================== */
+/* PAGINACIÓN */
+/* ==================== */
+.pagination-container {
+    margin-top: 40px;
+    padding: 20px 0;
+    border-top: 1px solid var(--light-gray);
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.pagination-btn {
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+    min-width: 120px;
+    justify-content: center;
+}
+
+.pagination-btn:hover:not(.disabled) {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.pagination-btn.disabled {
+    background-color: var(--light-gray);
+    color: var(--gray-color);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.pagination-info {
+    font-size: 1rem;
+    color: var(--dark-color);
+    font-weight: 600;
+    min-width: 120px;
+    text-align: center;
+}
+
 /* Main content */
 .main-container {
     flex: 1;
@@ -339,6 +450,9 @@ body {
     box-shadow: var(--box-shadow);
     transition: var(--transition);
     border: 1px solid var(--light-gray);
+    width: 100%;
+    max-width: 320px;
+    justify-self: center;
 }
 
 .product-card:hover {
@@ -502,6 +616,7 @@ body {
     gap: 10px;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
 }
 
 .cart-quantity {
@@ -666,6 +781,7 @@ body {
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    margin: 20px auto;
 }
 
 .modal-header {
@@ -1454,7 +1570,89 @@ body {
     color: var(--primary-dark);
 }
 
-/* CORRECCIONES PARA MÓVILES - INPUTS DE ARCHIVO */
+/* Añadir animación suave para el carrito flotante */
+@keyframes floatIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.floating-cart.visible {
+    animation: floatIn 0.3s ease-out;
+}
+
+/* Estilos para combinaciones de colores en paginación */
+.color-scheme-whatsapp .pagination-btn {
+    background-color: var(--primary-color);
+}
+
+.color-scheme-blue .pagination-btn {
+    background-color: var(--primary-color);
+}
+
+/* Mejorar scroll en modales */
+.modal-content {
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+/* Ajustes finales para mejor apariencia */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+}
+
+/* Prevenir que el contenido se desborde */
+.modal-body {
+    overflow-y: auto;
+    max-height: calc(90vh - 120px);
+}
+
+/* CENTRADO GENERAL */
+.header .container,
+.main-container,
+.footer .container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Centrar elementos de administración */
+.admin-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.admin-actions-left {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* Centrar formularios en modales */
+.auth-form, #product-form {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Centrar catálogo */
+.catalog-grid {
+    justify-items: center;
+}
+
+/* RESPONSIVE */
 @media (max-width: 768px) {
     .finance-button-container {
         top: 0;
@@ -1467,11 +1665,11 @@ body {
     .header .container {
         flex-direction: column;
         gap: 15px;
+        text-align: center;
     }
     
     .logo {
         flex-direction: column;
-        text-align: center;
         gap: 10px;
     }
     
@@ -1550,6 +1748,34 @@ body {
         grid-template-columns: repeat(2, 1fr);
     }
     
+    .pagination {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .pagination-btn {
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    /* Carrito flotante más pequeño en móviles */
+    .floating-cart {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+    }
+    
+    .floating-cart-icon {
+        font-size: 1.2rem;
+    }
+    
+    .floating-cart-count {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+    
     /* Mejorar el tamaño de los inputs de archivo en móviles */
     .image-file {
         font-size: 16px !important;
@@ -1584,11 +1810,6 @@ body {
         margin-top: 10px;
     }
     
-    /* Asegurar que las imágenes se muestren correctamente */
-    .product-image-single {
-        max-height: 300px;
-    }
-    
     /* Responsive para sistema de imágenes */
     .image-input-row {
         flex-direction: column;
@@ -1618,11 +1839,6 @@ body {
         left: 0;
         cursor: pointer;
         z-index: 1;
-    }
-    
-    /* Mantener el scroll en su lugar */
-    .modal-content {
-        scroll-behavior: auto;
     }
 }
 
@@ -1655,6 +1871,17 @@ body {
     
     .category-filter {
         text-align: center;
+    }
+    
+    .pagination-btn {
+        min-width: 100px;
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+    
+    .pagination-info {
+        min-width: 100px;
+        font-size: 0.9rem;
     }
     
     /* Responsive para sistema de imágenes en móviles */
@@ -1787,5 +2014,25 @@ input[type="button"] {
     .viewer-nav {
         width: 60px;
         height: 60px;
+    }
+}
+
+/* Ajustes adicionales para mejorar el centrado */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .catalog-grid, .products-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1025px) {
+    .catalog-grid, .products-list {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Mejorar visibilidad del carrito flotante */
+@media (max-width: 768px) {
+    .floating-cart {
+        bottom: 70px; /* Evitar interferencia con barra de navegación en móviles */
     }
 }

@@ -411,6 +411,29 @@
         </div>
     </footer>
 
+    <!-- Carrito flotante -->
+    <div id="floating-cart" class="floating-cart">
+        <div class="floating-cart-icon">
+            <i class="fas fa-shopping-cart"></i>
+            <span id="floating-cart-count" class="floating-cart-count">0</span>
+        </div>
+    </div>
+
+    <!-- Contenedor de paginación -->
+    <div id="pagination-container" class="pagination-container hidden">
+        <div class="pagination">
+            <button id="prev-page" class="pagination-btn">
+                <i class="fas fa-chevron-left"></i> Anterior
+            </button>
+            <div class="pagination-info">
+                Página <span id="current-page-display">1</span> de <span id="total-pages-display">1</span>
+            </div>
+            <button id="next-page" class="pagination-btn">
+                Siguiente <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script type="module" src="app.js"></script>
 </body>

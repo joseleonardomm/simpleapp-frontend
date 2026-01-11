@@ -13,7 +13,10 @@ let appState = {
     currentCategoryFilter: null,
     viewerImages: [],
     viewerIndex: 0,
-    editingProductImages: [] // Para manejar imágenes durante edición
+    editingProductImages: [], // Para manejar imágenes durante edición
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalPages: 1
 };
 
 // Referencias a elementos DOM
@@ -29,6 +32,15 @@ const elements = {
     copyLink: document.getElementById('copy-link'),
     financeBtn: document.getElementById('finance-btn'),
     financeButtonContainer: document.getElementById('finance-button-container'),
+    
+    // Nuevos elementos para carrito flotante y paginación
+    floatingCart: document.getElementById('floating-cart'),
+    floatingCartCount: document.getElementById('floating-cart-count'),
+    paginationContainer: document.getElementById('pagination-container'),
+    prevPageBtn: document.getElementById('prev-page'),
+    nextPageBtn: document.getElementById('next-page'),
+    currentPageDisplay: document.getElementById('current-page-display'),
+    totalPagesDisplay: document.getElementById('total-pages-display'),
     
     authModal: document.getElementById('auth-modal'),
     configModal: document.getElementById('config-modal'),
@@ -102,6 +114,7 @@ async function initApp() {
     try {
         elements.currentYear.textContent = new Date().getFullYear();
         setupEventListeners();
+        handleHistory(); // Agregar manejo de historial
         checkURLParams();
         await setupFirebaseAuth();
         
@@ -110,6 +123,30 @@ async function initApp() {
         console.error("Error inicializando aplicación:", error);
         showNotification("Error al iniciar la aplicación", "error");
     }
+}
+
+// Función para manejar el historial del navegador
+function handleHistory() {
+    // Agregar un estado inicial al historial
+    if (!history.state) {
+        history.replaceState({ modal: null, page: 1 }, '', window.location.href);
+    }
+    
+    // Manejar el botón de atrás
+    window.addEventListener('popstate', function(event) {
+        if (event.state) {
+            // Cerrar modales si estamos volviendo atrás
+            if (event.state.modal === null) {
+                closeAllModals();
+            }
+            
+            // Restaurar página si está en el estado
+            if (event.state.page) {
+                appState.currentPage = event.state.page;
+                updateUI();
+            }
+        }
+    });
 }
 
 // Configurar parámetros de URL
@@ -479,6 +516,22 @@ function setupEventListeners() {
         window.location.href = 'finanzas.html';
     });
     
+    // Nuevos event listeners para carrito flotante y paginación
+    if (elements.floatingCart) {
+        elements.floatingCart.addEventListener('click', () => {
+            openModal(elements.cartModal);
+            updateCartUI();
+        });
+    }
+    
+    if (elements.prevPageBtn) {
+        elements.prevPageBtn.addEventListener('click', goToPrevPage);
+    }
+    
+    if (elements.nextPageBtn) {
+        elements.nextPageBtn.addEventListener('click', goToNextPage);
+    }
+    
     if (elements.manageCategoriesBtn) elements.manageCategoriesBtn.addEventListener('click', openCategoryModal);
     if (elements.addCategoryBtn) elements.addCategoryBtn.addEventListener('click', addCategory);
     
@@ -595,9 +648,11 @@ function setupEventListeners() {
             
             if (categoryId === appState.currentCategoryFilter) {
                 appState.currentCategoryFilter = null;
+                appState.currentPage = 1;
             } else {
                 filterBtn.classList.add('active');
                 appState.currentCategoryFilter = categoryId;
+                appState.currentPage = 1;
             }
             
             renderCatalogProducts();
@@ -626,6 +681,64 @@ function setupEventListeners() {
             }
         }
     });
+}
+
+// Función para calcular paginación
+function calculatePagination(products) {
+    const totalProducts = products.length;
+    appState.totalPages = Math.ceil(totalProducts / appState.itemsPerPage);
+    
+    // Asegurar que currentPage esté dentro de los límites
+    if (appState.currentPage > appState.totalPages) {
+        appState.currentPage = 1;
+    }
+    
+    return {
+        totalPages: appState.totalPages,
+        currentPage: appState.currentPage,
+        startIndex: (appState.currentPage - 1) * appState.itemsPerPage,
+        endIndex: Math.min(appState.currentPage * appState.itemsPerPage, totalProducts)
+    };
+}
+
+// Funciones para cambiar de página
+function goToNextPage() {
+    if (appState.currentPage < appState.totalPages) {
+        appState.currentPage++;
+        updateUI();
+        // Agregar al historial
+        history.pushState({ modal: null, page: appState.currentPage }, '', window.location.href);
+    }
+}
+
+function goToPrevPage() {
+    if (appState.currentPage > 1) {
+        appState.currentPage--;
+        updateUI();
+        // Agregar al historial
+        history.pushState({ modal: null, page: appState.currentPage }, '', window.location.href);
+    }
+}
+
+// Función para actualizar UI de paginación
+function updatePaginationUI() {
+    if (elements.currentPageDisplay) {
+        elements.currentPageDisplay.textContent = appState.currentPage;
+    }
+    if (elements.totalPagesDisplay) {
+        elements.totalPagesDisplay.textContent = appState.totalPages;
+    }
+    
+    // Habilitar/deshabilitar botones
+    if (elements.prevPageBtn) {
+        elements.prevPageBtn.disabled = appState.currentPage === 1;
+        elements.prevPageBtn.classList.toggle('disabled', appState.currentPage === 1);
+    }
+    
+    if (elements.nextPageBtn) {
+        elements.nextPageBtn.disabled = appState.currentPage === appState.totalPages;
+        elements.nextPageBtn.classList.toggle('disabled', appState.currentPage === appState.totalPages);
+    }
 }
 
 // Función para renderizar inputs de imágenes con controles de portada - CORREGIDA PARA MÓVILES
@@ -1444,6 +1557,7 @@ async function handleLogout() {
         appState.products = [];
         appState.categories = [];
         appState.userEnabled = false;
+        appState.currentPage = 1;
         
         elements.adminPanel.classList.add('hidden');
         elements.catalogPanel.classList.remove('hidden');
@@ -1464,6 +1578,7 @@ async function handleLogout() {
         appState.cart = [];
         saveCartToLocalStorage();
         updateCartCount();
+        updateFloatingCart();
         
         window.location.href = '/';
         
@@ -1714,6 +1829,10 @@ function openModal(modal) {
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+    
+    // Agregar estado al historial
+    const modalId = modal.id;
+    history.pushState({ modal: modalId, page: appState.currentPage }, '', window.location.href);
 }
 
 // Función para cerrar modales
@@ -1722,16 +1841,38 @@ function closeAllModals() {
         modal.classList.remove('active');
     });
     document.body.style.overflow = '';
+    
+    // Agregar estado al historial sin modal
+    history.pushState({ modal: null, page: appState.currentPage }, '', window.location.href);
 }
 
 // Actualizar UI
 function updateUI() {
     updateCartCount();
+    updateFloatingCart();
     
     if (appState.currentUser && appState.userEnabled && appState.storeId === appState.currentUser.uid) {
         renderAdminProducts();
     } else {
         renderCatalogProducts();
+    }
+}
+
+// Función para actualizar el carrito flotante
+function updateFloatingCart() {
+    const totalItems = appState.cart.reduce((total, item) => total + item.quantity, 0);
+    
+    if (elements.floatingCartCount) {
+        elements.floatingCartCount.textContent = totalItems;
+    }
+    
+    // Mostrar/ocultar el carrito flotante basado en el scroll
+    if (elements.floatingCart) {
+        if (totalItems > 0) {
+            elements.floatingCart.classList.add('visible');
+        } else {
+            elements.floatingCart.classList.remove('visible');
+        }
     }
 }
 
@@ -1747,15 +1888,33 @@ function renderAdminProducts() {
                 <p>Agrega tu primer producto para comenzar</p>
             </div>
         `;
+        // Ocultar paginación si no hay productos
+        if (elements.paginationContainer) {
+            elements.paginationContainer.classList.add('hidden');
+        }
         return;
     }
     
+    // Calcular paginación
+    const pagination = calculatePagination(appState.products);
+    const productsToShow = appState.products.slice(pagination.startIndex, pagination.endIndex);
+    
     container.innerHTML = '';
     
-    appState.products.forEach(product => {
+    productsToShow.forEach(product => {
         const productCard = createProductCard(product, true);
         container.appendChild(productCard);
     });
+    
+    // Mostrar paginación si hay más de 10 productos
+    if (elements.paginationContainer) {
+        if (appState.totalPages > 1) {
+            elements.paginationContainer.classList.remove('hidden');
+            updatePaginationUI();
+        } else {
+            elements.paginationContainer.classList.add('hidden');
+        }
+    }
 }
 
 // Renderizar productos en catálogo
@@ -1777,8 +1936,16 @@ function renderCatalogProducts() {
                 <p>${appState.currentCategoryFilter ? 'Prueba con otra categoría' : 'No hay productos disponibles en este momento'}</p>
             </div>
         `;
+        // Ocultar paginación si no hay productos
+        if (elements.paginationContainer) {
+            elements.paginationContainer.classList.add('hidden');
+        }
         return;
     }
+    
+    // Calcular paginación
+    const pagination = calculatePagination(filteredProducts);
+    const productsToShow = filteredProducts.slice(pagination.startIndex, pagination.endIndex);
     
     container.innerHTML = '';
     
@@ -1791,10 +1958,7 @@ function renderCatalogProducts() {
         allBtn.textContent = 'Todos';
         allBtn.addEventListener('click', () => {
             appState.currentCategoryFilter = null;
-            document.querySelectorAll('.category-filter').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            allBtn.classList.add('active');
+            appState.currentPage = 1;
             renderCatalogProducts();
         });
         filtersContainer.appendChild(allBtn);
@@ -1810,10 +1974,25 @@ function renderCatalogProducts() {
         container.appendChild(filtersContainer);
     }
     
-    filteredProducts.forEach(product => {
+    const productsGrid = document.createElement('div');
+    productsGrid.className = 'products-grid';
+    
+    productsToShow.forEach(product => {
         const productCard = createProductCard(product, false);
-        container.appendChild(productCard);
+        productsGrid.appendChild(productCard);
     });
+    
+    container.appendChild(productsGrid);
+    
+    // Mostrar paginación si hay más de 10 productos
+    if (elements.paginationContainer) {
+        if (pagination.totalPages > 1) {
+            elements.paginationContainer.classList.remove('hidden');
+            updatePaginationUI();
+        } else {
+            elements.paginationContainer.classList.add('hidden');
+        }
+    }
 }
 
 // Crear tarjeta de producto - MODIFICADO: Sin carrusel en miniaturas, solo portada
@@ -1931,6 +2110,7 @@ function addToCart(productId) {
     
     saveCartToLocalStorage();
     updateUI();
+    updateFloatingCart();
     showNotification(`${product.name} agregado al carrito`, "success");
 }
 
@@ -1938,6 +2118,7 @@ function removeFromCart(productId) {
     appState.cart = appState.cart.filter(item => item.productId !== productId);
     saveCartToLocalStorage();
     updateUI();
+    updateFloatingCart();
     showNotification("Producto removido del carrito", "success");
 }
 
@@ -1954,6 +2135,7 @@ function updateCartQuantity(productId, change) {
         saveCartToLocalStorage();
         updateCartUI();
         updateCartCount();
+        updateFloatingCart();
     }
 }
 
@@ -1964,6 +2146,7 @@ function clearCart() {
         appState.cart = [];
         saveCartToLocalStorage();
         updateUI();
+        updateFloatingCart();
         showNotification("Carrito vaciado", "success");
     }
 }
@@ -2044,6 +2227,7 @@ function loadCartFromLocalStorage() {
                 appState.cart = JSON.parse(savedCart);
                 updateCartCount();
                 updateCartUI();
+                updateFloatingCart();
             } catch (error) {
                 console.error("Error cargando carrito:", error);
                 appState.cart = [];
