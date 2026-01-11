@@ -656,6 +656,8 @@ function setupEventListeners() {
             }
             
             renderCatalogProducts();
+            // Hacer scroll hacia arriba al cambiar categoría
+            scrollToTopOfProducts();
         }
         
         if (e.target.closest('.edit-category')) {
@@ -701,6 +703,39 @@ function calculatePagination(products) {
     };
 }
 
+// Nueva función para hacer scroll hacia arriba de los productos
+function scrollToTopOfProducts() {
+    // Pequeño delay para asegurar que el DOM se ha actualizado
+    setTimeout(() => {
+        // Determinar qué panel está visible
+        let targetElement;
+        
+        if (!elements.adminPanel.classList.contains('hidden')) {
+            // Panel de administración
+            targetElement = elements.adminPanel;
+        } else if (!elements.catalogPanel.classList.contains('hidden')) {
+            // Panel de catálogo
+            targetElement = elements.catalogPanel;
+        } else {
+            // Por defecto, el contenedor principal
+            targetElement = document.querySelector('.main-container');
+        }
+        
+        if (targetElement) {
+            // Calcular posición con offset para el header fijo
+            const headerHeight = document.querySelector('.header').offsetHeight;
+            const elementPosition = targetElement.getBoundingClientRect().top + window.pageYOffset;
+            const offsetPosition = elementPosition - headerHeight - 20; // 20px de margen adicional
+            
+            // Hacer scroll suave hacia la posición
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+        }
+    }, 50); // Pequeño delay para asegurar que los productos se hayan renderizado
+}
+
 // Funciones para cambiar de página
 function goToNextPage() {
     if (appState.currentPage < appState.totalPages) {
@@ -708,6 +743,8 @@ function goToNextPage() {
         updateUI();
         // Agregar al historial
         history.pushState({ modal: null, page: appState.currentPage }, '', window.location.href);
+        // Hacer scroll hacia arriba
+        scrollToTopOfProducts();
     }
 }
 
@@ -717,6 +754,8 @@ function goToPrevPage() {
         updateUI();
         // Agregar al historial
         history.pushState({ modal: null, page: appState.currentPage }, '', window.location.href);
+        // Hacer scroll hacia arriba
+        scrollToTopOfProducts();
     }
 }
 
@@ -1960,6 +1999,7 @@ function renderCatalogProducts() {
             appState.currentCategoryFilter = null;
             appState.currentPage = 1;
             renderCatalogProducts();
+            scrollToTopOfProducts();
         });
         filtersContainer.appendChild(allBtn);
         
