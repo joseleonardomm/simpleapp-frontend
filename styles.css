@@ -1585,7 +1585,85 @@ main {
     justify-items: center;
 }
 
-/* RESPONSIVE */
+/* Asegurar que el contenedor de productos ocupe todo el ancho */
+.catalog-grid {
+    width: 100%;
+}
+
+/* Mejorar la apariencia de los productos en el catálogo */
+.product-image-container {
+    height: 250px;
+}
+
+.product-info {
+    padding: 25px;
+}
+
+.product-name {
+    font-size: 1.3rem;
+    line-height: 1.4;
+    margin-bottom: 10px;
+}
+
+.product-price {
+    font-size: 1.6rem;
+    margin-bottom: 15px;
+}
+
+.product-description {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    max-height: 80px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+.product-category-badge {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    margin-bottom: 15px;
+}
+
+/* Mejorar la paginación en PC */
+.pagination-container {
+    margin-top: 60px;
+    padding: 25px 0;
+    border-top: 2px solid var(--light-gray);
+}
+
+.pagination-info {
+    font-size: 1.1rem;
+    min-width: 140px;
+}
+
+/* Asegurar que los filtros de categoría se vean bien en una línea */
+.category-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--light-gray);
+}
+
+.category-filters::-webkit-scrollbar {
+    height: 6px;
+}
+
+.category-filters::-webkit-scrollbar-track {
+    background: var(--light-gray);
+    border-radius: 10px;
+}
+
+.category-filters::-webkit-scrollbar-thumb {
+    background-color: var(--primary-color);
+    border-radius: 10px;
+}
+
+/* RESPONSIVE PARA MÓVILES (se mantiene igual) */
 @media (max-width: 768px) {
     .header .container {
         flex-direction: column;
@@ -1806,66 +1884,319 @@ main {
     }
 }
 
-@media (max-width: 480px) {
-    .products-list, .catalog-grid {
-        grid-template-columns: 1fr;
+/* ==================== */
+/* MEJORAS PARA PC */
+/* ==================== */
+
+/* Ajustes para pantallas grandes */
+@media (min-width: 769px) {
+    /* Mejorar distribución de productos en PC */
+    .catalog-grid, .products-list {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 30px;
     }
     
-    .modal-body, .modal-header, .modal-footer {
-        padding: 15px;
-    }
-    
-    .tabs {
-        justify-content: center;
-    }
-    
-    .tab-btn {
-        padding: 8px 12px;
-        font-size: 0.8rem;
-    }
-    
-    .color-schemes-grid {
-        grid-template-columns: 1fr;
-    }
-    
+    /* Centrar y mejorar estilo de filtros de categoría en PC */
     .category-filters {
-        flex-direction: column;
-        align-items: stretch;
+        justify-content: center;
+        margin-bottom: 30px;
+        padding: 15px;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        gap: 12px;
+        max-width: 90%;
+        margin-left: auto;
+        margin-right: auto;
     }
     
     .category-filter {
+        padding: 10px 20px;
+        font-size: 1rem;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+        min-width: 120px;
         text-align: center;
+        border: 2px solid transparent;
+    }
+    
+    .category-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .category-filter.active {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
+    }
+    
+    /* Mejorar tamaño de tarjetas de producto en PC */
+    .product-card {
+        max-width: 350px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Mejorar botones dentro de tarjetas */
+    .product-actions {
+        flex-direction: row;
+        justify-content: center;
+        gap: 12px;
+    }
+    
+    .product-actions .btn {
+        padding: 10px 18px;
+        font-size: 0.95rem;
+        border-radius: 25px;
+    }
+    
+    /* Mejorar header en PC */
+    .header .container {
+        padding: 12px 30px;
+        flex-direction: row;
+        text-align: left;
+    }
+    
+    .logo {
+        flex-direction: row;
+        gap: 15px;
+    }
+    
+    .brand-logo-container {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .default-logo {
+        width: 50px;
+        height: 50px;
+        font-size: 1.4rem;
+    }
+    
+    .store-info h1 {
+        font-size: 1.5rem;
+    }
+    
+    .store-tagline {
+        font-size: 0.9rem;
+    }
+    
+    /* Mejorar botones del header */
+    .nav {
+        gap: 12px;
+    }
+    
+    .btn {
+        padding: 10px 18px;
+        font-size: 0.95rem;
+        border-radius: 25px;
+    }
+    
+    /* Mejorar la vista de administración en PC */
+    .admin-actions {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .admin-actions-left {
+        flex-direction: row;
+        gap: 15px;
+    }
+    
+    /* Mejorar la vista del carrito en PC */
+    .cart-modal .modal-content {
+        max-width: 600px;
+    }
+    
+    /* Mejorar el grid de esquemas de color en PC */
+    .color-schemes-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+    }
+    
+    .color-scheme-option {
+        padding: 15px;
+    }
+    
+    /* Mejorar el sistema de imágenes en PC */
+    .image-input-row {
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    .image-input-preview {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .image-actions {
+        flex-direction: row;
+    }
+    
+    /* Mejorar paginación en PC */
+    .pagination {
+        max-width: 500px;
     }
     
     .pagination-btn {
-        min-width: 100px;
-        padding: 8px 15px;
-        font-size: 0.85rem;
+        min-width: 150px;
+        padding: 12px 25px;
+        font-size: 1rem;
     }
     
-    .pagination-info {
-        min-width: 100px;
-        font-size: 0.85rem;
+    /* Mejorar el contenedor principal */
+    .main-container {
+        padding-top: 130px;
+        padding-bottom: 50px;
     }
     
-    /* Responsive para sistema de imágenes en móviles */
-    .image-actions {
-        flex-direction: column;
+    /* Mejorar el contenedor de productos vacío */
+    .empty-state {
+        padding: 80px 40px;
     }
     
-    .btn-file-upload,
-    .btn-remove-image {
-        width: 100%;
-        justify-content: center;
+    .empty-state i {
+        font-size: 4rem;
     }
     
-    /* Header más compacto en móviles pequeños */
+    .empty-state h3 {
+        font-size: 1.8rem;
+    }
+    
+    .empty-state p {
+        font-size: 1.1rem;
+    }
+    
+    /* Ajustar contenedor principal */
+    .container {
+        max-width: 1200px;
+    }
+}
+
+/* Ajustes para pantallas muy grandes */
+@media (min-width: 1025px) {
+    .catalog-grid, .products-list {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 35px;
+    }
+    
+    .product-card {
+        max-width: 380px;
+    }
+    
+    .category-filters {
+        max-width: 80%;
+    }
+    
+    /* Mejorar modal en pantallas grandes */
+    .modal-content {
+        max-width: 600px;
+    }
+    
+    .product-modal .modal-content {
+        max-width: 700px;
+    }
+    
+    /* Mejorar header en pantallas muy grandes */
     .header .container {
-        padding: 5px 10px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    /* Mejorar el grid de categorías en modal */
+    .color-schemes-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+    }
+    
+    .color-preview {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .color-scheme-option span {
+        font-size: 0.9rem;
+    }
+    
+    /* Ajustar el grid de productos para 3 columnas */
+    .products-list, .catalog-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Ajustes para pantallas extra grandes */
+@media (min-width: 1400px) {
+    .catalog-grid, .products-list {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 40px;
+    }
+    
+    .product-card {
+        max-width: 320px;
+    }
+    
+    .container {
+        max-width: 1300px;
     }
     
     .main-container {
-        padding: 140px 10px 20px;
+        max-width: 1300px;
+        margin: 0 auto;
+    }
+    
+    .category-filters {
+        max-width: 1200px;
+        margin: 0 auto 40px auto;
+    }
+    
+    .category-filter {
+        padding: 12px 24px;
+        font-size: 1.1rem;
+        min-width: 140px;
+    }
+    
+    /* Mejorar botones de categoría en pantallas muy grandes */
+    .category-filter:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    }
+    
+    /* Mejorar el carrito flotante en pantallas grandes */
+    .floating-cart {
+        width: 70px;
+        height: 70px;
+        bottom: 40px;
+        right: 40px;
+    }
+    
+    .floating-cart-icon {
+        font-size: 1.8rem;
+    }
+    
+    .floating-cart-count {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Ajustes para pantallas medianas (tabletas) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .catalog-grid, .products-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .product-card {
+        max-width: 340px;
+    }
+    
+    .category-filters {
+        max-width: 95%;
     }
 }
 
@@ -1922,25 +2253,6 @@ main {
     scroll-margin-top: 100px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .image-actions {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    
-    .image-input-row {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-    
-    .image-input-preview {
-        width: 120px;
-        height: 120px;
-    }
-}
-
 /* Asegurar que los botones sean tocables en móviles */
 button, 
 .btn, 
@@ -1989,21 +2301,8 @@ input[type="button"] {
     }
     
     .viewer-nav {
-        width: 50px;
-        height: 50px;
-    }
-}
-
-/* Ajustes adicionales para mejorar el centrado */
-@media (min-width: 768px) and (max-width: 1024px) {
-    .catalog-grid, .products-list {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (min-width: 1025px) {
-    .catalog-grid, .products-list {
-        grid-template-columns: repeat(3, 1fr);
+        width: 44px;
+        height: 44px;
     }
 }
 
