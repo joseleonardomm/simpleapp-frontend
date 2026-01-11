@@ -91,29 +91,50 @@ body {
     padding: 0 20px;
 }
 
-/* Botón de finanzas (sutil) */
+/* ==================== */
+/* HEADER FIJADO */
+/* ==================== */
+.header {
+    background-color: white;
+    box-shadow: var(--box-shadow);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    width: 100%;
+}
+
+.header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    flex-wrap: wrap;
+}
+
+/* Botón de finanzas dentro del header */
 .finance-button-container {
+    width: 100%;
     background: linear-gradient(to right, rgba(37, 211, 102, 0.1), rgba(52, 183, 241, 0.1));
-    padding: 8px 0;
+    padding: 6px 0;
     text-align: center;
     border-bottom: 1px solid rgba(0,0,0,0.05);
-    position: sticky;
-    top: 0;
-    z-index: 99;
+    margin-bottom: 10px;
 }
 
 .btn-finance {
     background: transparent;
     border: 1px solid var(--primary-color);
     color: var(--primary-color);
-    padding: 6px 15px;
+    padding: 5px 12px;
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
 }
 
 .btn-finance:hover {
@@ -121,22 +142,6 @@ body {
     color: white;
     transform: translateY(-1px);
     box-shadow: 0 3px 8px rgba(37, 211, 102, 0.2);
-}
-
-/* Header */
-.header {
-    background-color: white;
-    box-shadow: var(--box-shadow);
-    position: sticky;
-    top: 40px; /* Ajuste para el botón de finanzas */
-    z-index: 100;
-}
-
-.header .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
 }
 
 /* Logo de la marca */
@@ -148,8 +153,8 @@ body {
 
 .brand-logo-container {
     position: relative;
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -163,15 +168,15 @@ body {
 }
 
 .default-logo {
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     background-color: var(--primary-color);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
 }
 
 .store-info {
@@ -180,35 +185,36 @@ body {
 }
 
 .store-info h1 {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     color: var(--secondary-color);
     margin: 0;
 }
 
 .store-tagline {
     color: var(--gray-color);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     margin-top: 2px;
     font-weight: 400;
 }
 
 .nav {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 /* Botones */
 .btn {
-    padding: 10px 16px;
+    padding: 8px 14px;
     border: none;
     border-radius: var(--border-radius);
     cursor: pointer;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     transition: var(--transition);
     background-color: var(--primary-color);
     color: white;
@@ -248,7 +254,7 @@ body {
 
 .btn-small {
     padding: 6px 12px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
 }
 
 .btn-block {
@@ -260,12 +266,12 @@ body {
     background-color: var(--secondary-color);
     color: white;
     border-radius: 50%;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     margin-left: 5px;
 }
 
@@ -285,7 +291,7 @@ body {
     justify-content: center;
     box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
     cursor: pointer;
-    z-index: 1000;
+    z-index: 1001; /* Por encima del header */
     transition: all 0.3s ease;
     opacity: 0;
     transform: translateY(20px);
@@ -380,10 +386,13 @@ body {
     text-align: center;
 }
 
-/* Main content */
+/* Main content - CON PADDING PARA HEADER FIJADO */
 .main-container {
     flex: 1;
-    padding: 30px 20px;
+    padding: 140px 20px 30px; /* Añadido padding-top para el header fijo */
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
 }
 
 .section-header {
@@ -441,6 +450,7 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 25px;
     margin-top: 20px;
+    justify-items: center;
 }
 
 .product-card {
@@ -452,7 +462,6 @@ body {
     border: 1px solid var(--light-gray);
     width: 100%;
     max-width: 320px;
-    justify-self: center;
 }
 
 .product-card:hover {
@@ -467,7 +476,6 @@ body {
     width: 100%;
     overflow: hidden;
     background-color: #f8f9fa;
-    /* PROPORCIÓN CUADRADA FIJA - esto asegura que todas las imágenes tengan el mismo tamaño */
     aspect-ratio: 1 / 1; /* Cuadrado perfecto */
 }
 
@@ -475,15 +483,14 @@ body {
 .product-image-single {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Recorta la imagen para llenar el contenedor */
-    object-position: center; /* Centra la imagen en el recorte */
+    object-fit: cover;
+    object-position: center;
     cursor: pointer;
     transition: transform 0.3s ease;
     background-color: #f8f9fa;
     display: block;
 }
 
-/* Mantener el hover effect */
 .product-image-single:hover {
     transform: scale(1.02);
 }
@@ -510,80 +517,6 @@ body {
 .no-image-placeholder i {
     font-size: 2rem;
     color: #adb5bd;
-}
-
-/* ELIMINAR CONTROLES DE CARRUSEL DE LAS MINIATURAS */
-.product-image-container .carousel-controls,
-.product-image-container .carousel-dots {
-    display: none !important;
-}
-
-/* Controles del carrusel (para el visor modal) */
-.carousel-controls {
-    position: absolute;
-    top: 50%;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    transform: translateY(-50%);
-    padding: 0 10px;
-    pointer-events: none;
-}
-
-.carousel-control {
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
-    pointer-events: all;
-}
-
-.carousel-control:hover {
-    background-color: rgba(0, 0, 0, 0.8);
-    transform: scale(1.1);
-}
-
-/* Puntos indicadores (solo para el visor modal) */
-.carousel-dots {
-    position: absolute;
-    bottom: 10px;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    gap: 5px;
-    pointer-events: none;
-}
-
-.carousel-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.5);
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    pointer-events: all;
-    transition: var(--transition);
-}
-
-.carousel-dot.active {
-    background-color: white;
-    transform: scale(1.2);
-}
-
-/* Para dispositivos móviles */
-@media (max-width: 768px) {
-    .product-image-container {
-        aspect-ratio: 1/1; /* Mantener cuadrado en móviles */
-    }
 }
 
 .product-info {
@@ -762,7 +695,7 @@ body {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    z-index: 1100; /* Por encima del header y carrito flotante */
     overflow-y: auto;
     padding: 20px;
 }
@@ -1496,7 +1429,7 @@ body {
     padding: 15px 20px;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
-    z-index: 9999;
+    z-index: 1100; /* Por encima del header */
     animation: slideIn 0.3s ease;
     max-width: 350px;
     display: flex;
@@ -1654,37 +1587,53 @@ main {
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
-    .finance-button-container {
-        top: 0;
-    }
-    
-    .header {
-        top: 40px;
-    }
-    
     .header .container {
         flex-direction: column;
-        gap: 15px;
+        gap: 10px;
         text-align: center;
+        padding: 8px 15px;
+    }
+    
+    .finance-button-container {
+        margin-bottom: 5px;
+        padding: 4px 0;
     }
     
     .logo {
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
     }
     
     .brand-logo-container {
         margin: 0 auto;
     }
     
+    .store-info h1 {
+        font-size: 1.1rem;
+    }
+    
+    .store-tagline {
+        font-size: 0.7rem;
+    }
+    
     .nav {
-        width: 100%;
         justify-content: center;
         flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .btn {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
+    
+    .main-container {
+        padding: 160px 15px 25px; /* Más padding-top para header móvil */
     }
     
     .products-list, .catalog-grid {
         grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
     }
     
     .modal-content {
@@ -1696,9 +1645,9 @@ main {
     }
     
     .viewer-nav {
-        width: 40px;
-        height: 40px;
-        font-size: 1.2rem;
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
     }
     
     .viewer-nav.prev {
@@ -1713,6 +1662,7 @@ main {
         bottom: 10px;
         right: 10px;
         padding: 5px 10px;
+        font-size: 0.8rem;
     }
     
     .cart-item {
@@ -1756,6 +1706,14 @@ main {
     .pagination-btn {
         width: 100%;
         max-width: 200px;
+        min-width: auto;
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+    
+    .pagination-info {
+        min-width: auto;
+        font-size: 0.9rem;
     }
     
     /* Carrito flotante más pequeño en móviles */
@@ -1783,8 +1741,8 @@ main {
     }
     
     .btn-file-upload {
-        padding: 12px 16px !important;
-        font-size: 16px !important;
+        padding: 10px 14px !important;
+        font-size: 14px !important;
         min-height: 44px;
     }
     
@@ -1805,8 +1763,8 @@ main {
     /* Mejorar el botón de agregar imagen */
     #add-image {
         width: 100%;
-        padding: 14px;
-        font-size: 16px;
+        padding: 12px;
+        font-size: 14px;
         margin-top: 10px;
     }
     
@@ -1840,6 +1798,12 @@ main {
         cursor: pointer;
         z-index: 1;
     }
+    
+    /* Ajustar altura del header en móviles */
+    .header {
+        height: auto;
+        min-height: 120px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1856,8 +1820,8 @@ main {
     }
     
     .tab-btn {
-        padding: 10px 15px;
-        font-size: 0.9rem;
+        padding: 8px 12px;
+        font-size: 0.8rem;
     }
     
     .color-schemes-grid {
@@ -1876,12 +1840,12 @@ main {
     .pagination-btn {
         min-width: 100px;
         padding: 8px 15px;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
     
     .pagination-info {
         min-width: 100px;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
     
     /* Responsive para sistema de imágenes en móviles */
@@ -1893,6 +1857,15 @@ main {
     .btn-remove-image {
         width: 100%;
         justify-content: center;
+    }
+    
+    /* Header más compacto en móviles pequeños */
+    .header .container {
+        padding: 5px 10px;
+    }
+    
+    .main-container {
+        padding: 140px 10px 20px;
     }
 }
 
@@ -1995,6 +1968,10 @@ input[type="button"] {
         flex: 1;
         min-height: 50px;
     }
+    
+    .floating-cart:hover {
+        transform: none;
+    }
 }
 
 /* Optimizar para dispositivos táctiles */
@@ -2012,8 +1989,8 @@ input[type="button"] {
     }
     
     .viewer-nav {
-        width: 60px;
-        height: 60px;
+        width: 50px;
+        height: 50px;
     }
 }
 
@@ -2033,6 +2010,13 @@ input[type="button"] {
 /* Mejorar visibilidad del carrito flotante */
 @media (max-width: 768px) {
     .floating-cart {
-        bottom: 70px; /* Evitar interferencia con barra de navegación en móviles */
+        bottom: 80px; /* Más alto para evitar interferencias */
+    }
+}
+
+/* Asegurar que el contenido no se quede detrás del header fijo */
+@media (min-width: 769px) {
+    .main-container {
+        padding-top: 130px; /* Ajuste para desktop */
     }
 }
