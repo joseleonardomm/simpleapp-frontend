@@ -44,7 +44,7 @@ const elements = {
     prevPageBtn: document.getElementById('prev-page'),
     nextPageBtn: document.getElementById('next-page'),
     currentPageDisplay: document.getElementById('current-page-display'),
-    totalPagesDisplay: document.getElementById('total-pages-display'),
+    totalPagesDisplay: document.getElementById('totalPagesDisplay'),
     
     authModal: document.getElementById('auth-modal'),
     configModal: document.getElementById('config-modal'),
@@ -446,7 +446,9 @@ function showAccountDisabledMessage(isTrial = false) {
             
             if (viewStoreBtn) {
                 viewStoreBtn.addEventListener('click', () => {
-                    window.location.href = `/?store=${appState.currentUser.uid}`;
+                    // CORRECCIÓN: Redirigir al enlace de la tienda (vista de cliente)
+                    const storeUrl = `${window.location.origin}/?store=${appState.storeId}`;
+                    window.location.href = storeUrl;
                 });
             }
         }, 100);
