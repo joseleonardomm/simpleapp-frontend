@@ -16,7 +16,11 @@ let appState = {
     editingProductImages: [], // Para manejar imágenes durante edición
     currentPage: 1,
     itemsPerPage: 10,
-    totalPages: 1
+    totalPages: 1,
+    productLimit: 9999, // Límite inicial de productos
+    productCount: 0, // Contador de productos actuales
+    isTrialAccount: false, // Si es cuenta de prueba
+    trialProductsRemaining: 3 // Productos restantes en prueba
 };
 
 // Referencias a elementos DOM
@@ -193,6 +197,7 @@ async function setupFirebaseAuth() {
                 console.log("Usuario NO autenticado");
                 appState.currentUser = null;
                 appState.userEnabled = false;
+                appState.isTrialAccount = false;
                 updateAuthUI();
             }
         });
@@ -219,24 +224,39 @@ async function loadUserStore(storeId) {
                 email: appState.currentUser.email,
                 storeId: storeId,
                 enabled: false,
+                isTrial: true, // Nueva propiedad para cuentas de prueba
+                trialProductsRemaining: 3,
+                productLimit: 3, // Límite inicial
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             });
             
             appState.userEnabled = false;
-            showAccountDisabledMessage();
+            appState.isTrialAccount = true;
+            appState.trialProductsRemaining = 3;
+            appState.productLimit = 3;
+            
+            showAccountDisabledMessage(true); // Pasar true para indicar que es cuenta de prueba
         } else {
             const userData = userSnap.data();
             const isEnabled = userData.enabled === true;
             appState.userEnabled = isEnabled;
+            appState.isTrialAccount = userData.isTrial === true;
+            appState.trialProductsRemaining = userData.trialProductsRemaining || 3;
+            appState.productLimit = userData.productLimit || 3;
             
             if (!isEnabled) {
                 console.log("Usuario NO está habilitado");
-                showAccountDisabledMessage();
+                // Contar productos existentes para la cuenta de prueba
+                await countUserProducts(storeId);
+                showAccountDisabledMessage(appState.isTrialAccount);
                 return;
+            } else {
+                // Si está habilitado, quitar límites
+                appState.productLimit = 9999; // Número alto para ilimitado
+                appState.isTrialAccount = false;
+                console.log("Usuario está habilitado, sin límites de productos");
             }
-            
-            console.log("Usuario está habilitado, continuando...");
         }
         
         const storeRef = doc(db, "stores", storeId);
@@ -249,7 +269,7 @@ async function loadUserStore(storeId) {
             elements.storeIdDisplay.textContent = storeId;
             await loadStoreProducts(storeId);
             
-            if (appState.userEnabled) {
+            if (appState.userEnabled || appState.isTrialAccount) {
                 console.log("Mostrando panel de administración...");
                 elements.adminPanel.classList.remove('hidden');
                 elements.catalogPanel.classList.add('hidden');
@@ -268,6 +288,35 @@ async function loadUserStore(storeId) {
     } catch (error) {
         console.error("Error cargando tienda:", error);
         showNotification("Error cargando tienda", "error");
+    }
+}
+
+// Función para contar productos del usuario
+async function countUserProducts(storeId) {
+    try {
+        const { db, collection, getDocs } = window.firebaseServices;
+        
+        const productsRef = collection(db, "stores", storeId, "products");
+        const querySnapshot = await getDocs(productsRef);
+        
+        appState.productCount = querySnapshot.size;
+        appState.trialProductsRemaining = Math.max(0, 3 - appState.productCount);
+        
+        console.log(`Productos actuales: ${appState.productCount}, Restantes: ${appState.trialProductsRemaining}`);
+        
+        // Actualizar en Firestore
+        if (appState.isTrialAccount) {
+            const { doc, updateDoc } = window.firebaseServices;
+            const userDocRef = doc(db, "users", storeId);
+            await updateDoc(userDocRef, {
+                trialProductsRemaining: appState.trialProductsRemaining,
+                productCount: appState.productCount,
+                updatedAt: window.firebaseServices.serverTimestamp()
+            });
+        }
+        
+    } catch (error) {
+        console.error("Error contando productos:", error);
     }
 }
 
@@ -321,9 +370,9 @@ function applyColorScheme(scheme) {
     }
 }
 
-// Mostrar mensaje de cuenta deshabilitada
-function showAccountDisabledMessage() {
-    console.log("Mostrando mensaje de cuenta deshabilitada");
+// Mostrar mensaje de cuenta deshabilitada o en prueba
+function showAccountDisabledMessage(isTrial = false) {
+    console.log("Mostrando mensaje de cuenta", isTrial ? "de prueba" : "deshabilitada");
     
     elements.adminPanel.classList.add('hidden');
     elements.catalogPanel.classList.remove('hidden');
@@ -332,16 +381,91 @@ function showAccountDisabledMessage() {
     elements.manageCategoriesBtn.classList.add('hidden');
     elements.financeButtonContainer.classList.add('hidden');
     
-    elements.catalogDescription.innerHTML = `
-        <div style="text-align: center; padding: 30px;">
-            <h3><i class="fas fa-hourglass-half"></i> Cuenta Pendiente de Activación</h3>
-            <p>Tu cuenta está pendiente de activación por el administrador.</p>
-            <p>Una vez activada, podrás acceder a todas las funciones de tu tienda.</p>
-            <p>Para más información, contacta al administrador.</p>
-        </div>
-    `;
+    if (isTrial) {
+        elements.catalogDescription.innerHTML = `
+            <div style="text-align: center; padding: 30px; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3><i class="fas fa-graduation-cap"></i> Modo Prueba Activado</h3>
+                    <p>Tu cuenta está en período de prueba</p>
+                </div>
+                
+                <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                    <h4 style="color: #25D366; margin-bottom: 15px;">
+                        <i class="fas fa-check-circle"></i> Funciones Disponibles en Prueba:
+                    </h4>
+                    <ul style="text-align: left; padding-left: 20px;">
+                        <li>Crear hasta <strong>3 productos</strong> de prueba</li>
+                        <li>Configurar tu tienda (nombre, logo, colores)</li>
+                        <li>Crear categorías</li>
+                        <li>Ver vista previa de tu catálogo</li>
+                        <li>Compartir enlace de tu tienda</li>
+                    </ul>
+                </div>
+                
+                <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                    <h4 style="color: #856404; margin-bottom: 10px;">
+                        <i class="fas fa-info-circle"></i> Información Importante:
+                    </h4>
+                    <p style="color: #856404; margin-bottom: 5px;">
+                        <strong>Productos de prueba:</strong> ${appState.trialProductsRemaining} de 3 disponibles
+                    </p>
+                    <p style="color: #856404; margin-bottom: 5px;">
+                        Una vez que el administrador active tu cuenta, podrás agregar productos ilimitados.
+                    </p>
+                    <p style="color: #856404; margin-bottom: 0;">
+                        Para activación, contacta al administrador con tu email: <strong>${appState.currentUser?.email}</strong>
+                    </p>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                    <button id="start-trial-btn" class="btn btn-primary" style="padding: 10px 20px;">
+                        <i class="fas fa-play"></i> Comenzar Prueba
+                    </button>
+                    <button id="view-store-btn" class="btn btn-secondary" style="padding: 10px 20px;">
+                        <i class="fas fa-store"></i> Ver Mi Tienda
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Event listeners para los botones
+        setTimeout(() => {
+            const startTrialBtn = document.getElementById('start-trial-btn');
+            const viewStoreBtn = document.getElementById('view-store-btn');
+            
+            if (startTrialBtn) {
+                startTrialBtn.addEventListener('click', () => {
+                    elements.catalogPanel.classList.add('hidden');
+                    elements.adminPanel.classList.remove('hidden');
+                    elements.addProduct.classList.remove('hidden');
+                    elements.manageCategoriesBtn.classList.remove('hidden');
+                    elements.configBtn.classList.remove('hidden');
+                    showNotification("Modo prueba activado. Puedes crear hasta 3 productos.", "success");
+                });
+            }
+            
+            if (viewStoreBtn) {
+                viewStoreBtn.addEventListener('click', () => {
+                    window.location.href = `/?store=${appState.currentUser.uid}`;
+                });
+            }
+        }, 100);
+        
+    } else {
+        elements.catalogDescription.innerHTML = `
+            <div style="text-align: center; padding: 30px;">
+                <h3><i class="fas fa-hourglass-half"></i> Cuenta Pendiente de Activación</h3>
+                <p>Tu cuenta está pendiente de activación por el administrador.</p>
+                <p>Una vez activada, podrás acceder a todas las funciones de tu tienda.</p>
+                <p>Para más información, contacta al administrador.</p>
+            </div>
+        `;
+    }
     
-    showNotification("Tu cuenta está pendiente de activación", "warning");
+    showNotification(isTrial ? 
+        "Cuenta en modo prueba activada. Puedes crear hasta 3 productos." : 
+        "Tu cuenta está pendiente de activación", 
+    isTrial ? "success" : "warning");
 }
 
 // Cargar tienda para cliente
@@ -396,7 +520,7 @@ async function createStoreForUser(storeId) {
         appState.currentStore = storeData;
         await updateStoreBranding(storeData);
         
-        if (appState.userEnabled) {
+        if (appState.userEnabled || appState.isTrialAccount) {
             elements.adminPanel.classList.remove('hidden');
             elements.catalogPanel.classList.add('hidden');
             elements.configBtn.classList.remove('hidden');
@@ -1236,6 +1360,9 @@ async function handleRegister(e) {
             storeId: user.uid,
             storeName: storeName,
             enabled: false,
+            isTrial: true,
+            trialProductsRemaining: 3,
+            productLimit: 3,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         };
@@ -1256,7 +1383,7 @@ async function handleRegister(e) {
         await setDoc(doc(db, "stores", user.uid), storeData);
         
         closeAllModals();
-        showNotification("¡Cuenta creada exitosamente! Pendiente de activación por el administrador.", "warning");
+        showNotification("¡Cuenta creada exitosamente! Puedes crear hasta 3 productos de prueba mientras esperas la activación.", "success");
         
         setTimeout(() => {
             window.location.href = `/?store=${user.uid}`;
@@ -1285,9 +1412,19 @@ async function handleProductSubmit(e) {
     e.preventDefault();
     e.stopPropagation(); // Importante para móviles
     
-    if (!appState.userEnabled) {
-        showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
-        return;
+    // Verificar límite para cuentas de prueba
+    if (appState.isTrialAccount && !appState.userEnabled) {
+        if (appState.productCount >= 3) {
+            showNotification("Has alcanzado el límite de 3 productos en modo prueba. Contacta al administrador para activar tu cuenta completa.", "error");
+            closeAllModals();
+            return;
+        }
+        
+        if (appState.trialProductsRemaining <= 0) {
+            showNotification("No tienes productos de prueba disponibles. Contacta al administrador para activar tu cuenta.", "error");
+            closeAllModals();
+            return;
+        }
     }
     
     // Deshabilitar el botón de submit para evitar envíos múltiples
@@ -1409,7 +1546,28 @@ async function handleProductSubmit(e) {
                 const newProductId = docRef.id;
                 console.log("Nuevo producto creado con ID:", newProductId);
                 
-                showNotification("Producto agregado", "success");
+                // Si es cuenta de prueba, reducir el contador y actualizar
+                if (appState.isTrialAccount && !appState.userEnabled) {
+                    appState.productCount++;
+                    appState.trialProductsRemaining = Math.max(0, 3 - appState.productCount);
+                    
+                    // Actualizar en Firestore
+                    const { doc, updateDoc } = window.firebaseServices;
+                    const userDocRef = doc(window.firebaseServices.db, "users", appState.storeId);
+                    await updateDoc(userDocRef, {
+                        trialProductsRemaining: appState.trialProductsRemaining,
+                        productCount: appState.productCount,
+                        updatedAt: window.firebaseServices.serverTimestamp()
+                    });
+                    
+                    if (appState.trialProductsRemaining > 0) {
+                        showNotification(`Producto agregado. Te quedan ${appState.trialProductsRemaining} productos de prueba.`, "success");
+                    } else {
+                        showNotification("¡Has usado todos tus productos de prueba! Contacta al administrador para activar tu cuenta completa.", "warning");
+                    }
+                } else {
+                    showNotification("Producto agregado", "success");
+                }
             }
             
             await loadStoreProducts(appState.storeId);
@@ -1455,7 +1613,25 @@ async function deleteProduct(productId) {
         appState.cart = appState.cart.filter(item => item.productId !== productId);
         saveCartToLocalStorage();
         
-        showNotification("Producto eliminado", "success");
+        // Si es cuenta de prueba, actualizar contador
+        if (appState.isTrialAccount && !appState.userEnabled) {
+            appState.productCount = Math.max(0, appState.productCount - 1);
+            appState.trialProductsRemaining = Math.min(3, appState.trialProductsRemaining + 1);
+            
+            // Actualizar en Firestore
+            const { doc, updateDoc } = window.firebaseServices;
+            const userDocRef = doc(window.firebaseServices.db, "users", appState.storeId);
+            await updateDoc(userDocRef, {
+                trialProductsRemaining: appState.trialProductsRemaining,
+                productCount: appState.productCount,
+                updatedAt: window.firebaseServices.serverTimestamp()
+            });
+            
+            showNotification(`Producto eliminado. Ahora tienes ${appState.trialProductsRemaining} productos de prueba disponibles.`, "success");
+        } else {
+            showNotification("Producto eliminado", "success");
+        }
+        
         await loadStoreProducts(appState.storeId);
     } catch (error) {
         console.error("Error eliminando producto:", error);
@@ -1465,7 +1641,7 @@ async function deleteProduct(productId) {
 
 // Guardar configuración de tienda
 async function saveStoreConfig() {
-    if (!appState.userEnabled) {
+    if (!appState.userEnabled && !appState.isTrialAccount) {
         showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
         return;
     }
@@ -1575,7 +1751,12 @@ function updateAuthUI() {
         
         if (appState.userEnabled) {
             elements.financeButtonContainer.classList.remove('hidden');
+            elements.myStoreBtn.innerHTML = '<i class="fas fa-store"></i> Mi Tienda (Activa)';
+        } else if (appState.isTrialAccount) {
+            elements.myStoreBtn.innerHTML = `<i class="fas fa-graduation-cap"></i> Mi Tienda (Prueba: ${appState.trialProductsRemaining}/3)`;
+            elements.financeButtonContainer.classList.add('hidden');
         } else {
+            elements.myStoreBtn.innerHTML = '<i class="fas fa-store"></i> Mi Tienda (Pendiente)';
             elements.financeButtonContainer.classList.add('hidden');
         }
     } else {
@@ -1596,7 +1777,10 @@ async function handleLogout() {
         appState.products = [];
         appState.categories = [];
         appState.userEnabled = false;
+        appState.isTrialAccount = false;
         appState.currentPage = 1;
+        appState.trialProductsRemaining = 3;
+        appState.productCount = 0;
         
         elements.adminPanel.classList.add('hidden');
         elements.catalogPanel.classList.remove('hidden');
@@ -1673,7 +1857,7 @@ function openAuthModal() {
 
 // Abrir modal de configuración
 function openConfigModal() {
-    if (!appState.userEnabled) {
+    if (!appState.userEnabled && !appState.isTrialAccount) {
         showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
         return;
     }
@@ -1684,7 +1868,7 @@ function openConfigModal() {
 
 // Abrir modal de categorías
 function openCategoryModal() {
-    if (!appState.userEnabled) {
+    if (!appState.userEnabled && !appState.isTrialAccount) {
         showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
         return;
     }
@@ -1817,15 +2001,33 @@ async function deleteCategory(categoryId) {
 
 // Abrir modal para agregar producto
 function openAddProductModal() {
-    if (!appState.userEnabled) {
-        showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
-        return;
+    if (!appState.userEnabled && appState.isTrialAccount) {
+        // Verificar límite de productos en prueba
+        if (appState.productCount >= 3) {
+            showNotification("Has alcanzado el límite de 3 productos en modo prueba. Contacta al administrador para activar tu cuenta completa.", "error");
+            return;
+        }
+        
+        if (appState.trialProductsRemaining <= 0) {
+            showNotification("No tienes productos de prueba disponibles. Contacta al administrador para activar tu cuenta.", "error");
+            return;
+        }
     }
     
     elements.productForm.reset();
     elements.productId.value = "";
     elements.productCategory.value = "";
     document.getElementById('modal-title').textContent = "Agregar Producto";
+    
+    // Mostrar mensaje de producto de prueba si aplica
+    if (appState.isTrialAccount && !appState.userEnabled) {
+        document.getElementById('modal-title').innerHTML = `
+            Agregar Producto de Prueba 
+            <span style="font-size: 0.7rem; background: #ffc107; color: #856404; padding: 3px 8px; border-radius: 10px; margin-left: 10px;">
+                ${appState.trialProductsRemaining} de 3 disponibles
+            </span>
+        `;
+    }
     
     // Limpiar imágenes en edición
     appState.editingProductImages = [];
@@ -1838,11 +2040,6 @@ function openAddProductModal() {
 
 // Abrir modal para editar producto
 function openEditProductModal(productId) {
-    if (!appState.userEnabled) {
-        showNotification("Tu cuenta no está activada. Contacta al administrador.", "error");
-        return;
-    }
-    
     const product = appState.products.find(p => p.id === productId);
     if (!product) return;
     
@@ -1890,7 +2087,7 @@ function updateUI() {
     updateCartCount();
     updateFloatingCart();
     
-    if (appState.currentUser && appState.userEnabled && appState.storeId === appState.currentUser.uid) {
+    if (appState.currentUser && (appState.userEnabled || appState.isTrialAccount) && appState.storeId === appState.currentUser.uid) {
         renderAdminProducts();
     } else {
         renderCatalogProducts();
@@ -1919,8 +2116,31 @@ function updateFloatingCart() {
 function renderAdminProducts() {
     const container = elements.productsList;
     
+    // Mostrar información de prueba si aplica
+    if (appState.isTrialAccount && !appState.userEnabled) {
+        const trialInfo = document.createElement('div');
+        trialInfo.className = 'trial-info-banner';
+        trialInfo.innerHTML = `
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                <h3 style="margin: 0 0 10px 0;">
+                    <i class="fas fa-graduation-cap"></i> Modo Prueba Activo
+                </h3>
+                <p style="margin: 0; font-size: 1.1rem;">
+                    Productos: ${appState.productCount} de 3 creados
+                    <span style="margin: 0 10px;">•</span>
+                    Restantes: ${appState.trialProductsRemaining}
+                </p>
+                <p style="margin: 10px 0 0 0; font-size: 0.9rem; opacity: 0.9;">
+                    Contacta al administrador para activar tu cuenta completa
+                </p>
+            </div>
+        `;
+        container.innerHTML = '';
+        container.appendChild(trialInfo);
+    }
+    
     if (appState.products.length === 0) {
-        container.innerHTML = `
+        container.innerHTML += `
             <div class="empty-state">
                 <i class="fas fa-box-open"></i>
                 <h3>No hay productos aún</h3>
@@ -1937,8 +2157,6 @@ function renderAdminProducts() {
     // Calcular paginación
     const pagination = calculatePagination(appState.products);
     const productsToShow = appState.products.slice(pagination.startIndex, pagination.endIndex);
-    
-    container.innerHTML = '';
     
     productsToShow.forEach(product => {
         const productCard = createProductCard(product, true);
@@ -2072,7 +2290,7 @@ function createProductCard(product, isAdmin) {
     
     let actionsHTML = '';
     
-    if (isAdmin && appState.userEnabled) {
+    if (isAdmin && (appState.userEnabled || appState.isTrialAccount)) {
         actionsHTML = `
             <div class="product-actions">
                 <button class="btn btn-secondary edit-product" data-id="${product.id}">
@@ -2083,7 +2301,7 @@ function createProductCard(product, isAdmin) {
                 </button>
             </div>
         `;
-    } else if (isAdmin && !appState.userEnabled) {
+    } else if (isAdmin && !appState.userEnabled && !appState.isTrialAccount) {
         actionsHTML = `
             <div class="product-actions">
                 <p style="color: #dc3545; font-size: 0.9rem; margin: 10px 0;">
@@ -2285,7 +2503,7 @@ function checkoutViaWhatsApp() {
     
     if (!appState.currentStore || !appState.currentStore.whatsappNumber) {
         showNotification("La tienda no tiene WhatsApp configurado", "error");
-        if (appState.currentUser && appState.userEnabled && appState.storeId === appState.currentUser.uid) {
+        if (appState.currentUser && (appState.userEnabled || appState.isTrialAccount) && appState.storeId === appState.currentUser.uid) {
             openConfigModal();
         }
         return;
